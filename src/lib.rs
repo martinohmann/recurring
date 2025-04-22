@@ -68,6 +68,32 @@ impl Event {
     pub fn is_recurring(&self) -> bool {
         self.repeat.is_some()
     }
+
+    pub fn next(&self) -> Option<Event> {
+        self.shift(|frequency| frequency.next_date_time(self.start))
+    }
+
+    pub fn previous(&self) -> Option<Event> {
+        self.shift(|frequency| frequency.previous_date_time(self.start))
+    }
+
+    fn shift<F>(&self, f: F) -> Option<Event>
+    where
+        F: FnOnce(&Frequency) -> Option<DateTime>,
+    {
+        self.repeat.and_then(|frequency| {
+            let start = f(&frequency)?;
+            let end = self
+                .duration()
+                .and_then(|duration| start.checked_add(duration).ok());
+
+            Some(Event {
+                start,
+                end,
+                repeat: self.repeat,
+            })
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -135,6 +161,10 @@ impl Frequency {
                 }
             }
         }
+    }
+
+    fn previous_date_time(&self, _instant: DateTime) -> Option<DateTime> {
+        unimplemented!()
     }
 }
 
@@ -223,15 +253,15 @@ impl<'a> IntoIterator for &'a Series<'a> {
 #[derive(Debug, Clone)]
 pub struct Iter<'a> {
     series: &'a Series<'a>,
-    start: Option<DateTime>,
-    current: Option<DateTime>,
+    first: Option<Event>,
+    current: Option<Event>,
 }
 
 impl<'a> Iter<'a> {
     fn new(series: &'a Series) -> Iter<'a> {
         Iter {
             series,
-            start: Some(series.first.start()),
+            first: Some(series.first().clone()),
             current: None,
         }
     }
@@ -241,33 +271,20 @@ impl Iterator for Iter<'_> {
     type Item = Event;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let first = self.series.first();
-
-        let start = if let Some(start) = self.start.take() {
-            start
+        let event = if let Some(first) = self.first.take() {
+            first
         } else {
             let current = self.current.take()?;
-            let frequency = first.frequency()?;
-            frequency.next_date_time(current)?
+            current.next()?
         };
 
         if let Some(end) = self.series.end() {
-            if start >= end {
+            if event.start() >= end {
                 return None;
             }
         }
 
-        self.current = Some(start);
-
-        let mut event = Event::at(start);
-
-        if let Some(duration) = first.duration() {
-            event = event.until(start.checked_add(duration).ok()?)
-        }
-
-        if let Some(frequency) = first.frequency() {
-            event = event.repeat(frequency)
-        }
+        self.current = Some(event.clone());
 
         Some(event)
     }
