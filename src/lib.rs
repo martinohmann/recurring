@@ -1,6 +1,11 @@
 use jiff::civil::{DateTime, Weekday};
 use jiff::{SignedDuration, Span, ToSpan};
 
+pub mod event;
+pub mod frequency;
+pub mod repeat;
+pub mod series;
+
 #[derive(Debug, Clone)]
 pub struct Event {
     start: DateTime,
@@ -202,11 +207,11 @@ impl<'a> Series<'a> {
         Iter::new(self)
     }
 
-    pub fn get_last_event(&self) -> Option<Event> {
-        self.end.and_then(|end| self.get_event_before(end))
+    pub fn last(&self) -> Option<Event> {
+        self.end.and_then(|end| self.event_before(end))
     }
 
-    pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
+    pub fn event_before(&self, instant: DateTime) -> Option<Event> {
         let mut previous: Option<Event> = None;
 
         for event in self {
@@ -222,7 +227,7 @@ impl<'a> Series<'a> {
         None
     }
 
-    pub fn get_event_containing(&self, instant: DateTime) -> Option<Event> {
+    pub fn event_containing(&self, instant: DateTime) -> Option<Event> {
         for event in self {
             if event.start() > instant {
                 return None;
@@ -236,7 +241,7 @@ impl<'a> Series<'a> {
         None
     }
 
-    pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
+    pub fn event_after(&self, instant: DateTime) -> Option<Event> {
         self.iter().find(|event| event.start() > instant)
     }
 }
