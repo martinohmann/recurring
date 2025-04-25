@@ -132,6 +132,7 @@ impl Daily {
         }
     }
 
+    #[must_use]
     pub fn at(mut self, time: Time) -> Daily {
         self.at.push(time);
         self.at.sort();

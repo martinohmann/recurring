@@ -14,10 +14,17 @@ impl Event {
         }
     }
 
+    /// # Panics
+    ///
+    /// If `end < start`, this function panics.
     pub fn new(start: DateTime, end: DateTime) -> Event {
         Event::at(start).ends_at(end)
     }
 
+    /// # Panics
+    ///
+    /// If `end` is less than the `Event`'s `start`, this method panics.
+    #[must_use]
     pub fn ends_at(self, end: DateTime) -> Event {
         assert!(end >= self.start, "event end < start");
         Event {
