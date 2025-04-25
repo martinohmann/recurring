@@ -8,7 +8,9 @@ pub trait Repeat {
 
     fn previous_event(&self, instant: DateTime) -> Option<DateTime>;
 
-    fn contains_event(&self, instant: DateTime) -> bool;
+    fn is_series_event(&self, instant: DateTime, series_start: DateTime) -> bool;
+
+    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime>;
 }
 
 #[derive(Debug, Clone)]
@@ -31,8 +33,16 @@ impl Repeat for Secondly {
         instant.checked_sub(self.interval.seconds()).ok()
     }
 
-    fn contains_event(&self, _instant: DateTime) -> bool {
-        true
+    fn is_series_event(&self, instant: DateTime, series_start: DateTime) -> bool {
+        instant.subsec_nanosecond() == series_start.subsec_nanosecond()
+    }
+
+    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        instant
+            .with()
+            .subsec_nanosecond(series_start.subsec_nanosecond())
+            .build()
+            .ok()
     }
 }
 
@@ -56,8 +66,18 @@ impl Repeat for Minutely {
         instant.checked_sub(self.interval.minutes()).ok()
     }
 
-    fn contains_event(&self, _instant: DateTime) -> bool {
-        true
+    fn is_series_event(&self, instant: DateTime, series_start: DateTime) -> bool {
+        instant.second() == series_start.second()
+            && instant.subsec_nanosecond() == series_start.subsec_nanosecond()
+    }
+
+    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        instant
+            .with()
+            .second(series_start.second())
+            .subsec_nanosecond(series_start.subsec_nanosecond())
+            .build()
+            .ok()
     }
 }
 
@@ -81,8 +101,20 @@ impl Repeat for Hourly {
         instant.checked_sub(self.interval.hours()).ok()
     }
 
-    fn contains_event(&self, _instant: DateTime) -> bool {
-        true
+    fn is_series_event(&self, instant: DateTime, series_start: DateTime) -> bool {
+        instant.minute() == series_start.minute()
+            && instant.second() == series_start.second()
+            && instant.subsec_nanosecond() == series_start.subsec_nanosecond()
+    }
+
+    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        instant
+            .with()
+            .minute(series_start.minute())
+            .second(series_start.second())
+            .subsec_nanosecond(series_start.subsec_nanosecond())
+            .build()
+            .ok()
     }
 }
 
@@ -144,14 +176,23 @@ impl Repeat for Daily {
         }
     }
 
-    fn contains_event(&self, instant: DateTime) -> bool {
+    fn is_series_event(&self, instant: DateTime, series_start: DateTime) -> bool {
         if self.at.is_empty() {
-            return true;
+            return instant.time() == series_start.time();
         }
 
-        instant.checked_sub(1.minute()).map_or(false, |start| {
-            self.next_event(start)
-                .map_or(false, |next_date| next_date == instant)
-        })
+        instant
+            .checked_sub(1.minute())
+            .ok()
+            .and_then(|start| self.next_event(start))
+            == Some(instant)
+    }
+
+    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        if self.at.is_empty() {
+            return instant.with().time(series_start.time()).build().ok();
+        }
+
+        instant.with().time(*self.at.first().unwrap()).build().ok()
     }
 }

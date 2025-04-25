@@ -85,17 +85,27 @@ impl Repeat for Frequency {
         }
     }
 
-    fn contains_event(&self, instant: DateTime) -> bool {
+    fn is_series_event(&self, instant: DateTime, series_start: DateTime) -> bool {
         match self {
-            Frequency::Secondly(secondly) => secondly.contains_event(instant),
-            Frequency::Minutely(minutely) => minutely.contains_event(instant),
-            Frequency::Hourly(hourly) => hourly.contains_event(instant),
-            Frequency::Daily(daily) => daily.contains_event(instant),
+            Frequency::Secondly(secondly) => secondly.is_series_event(instant, series_start),
+            Frequency::Minutely(minutely) => minutely.is_series_event(instant, series_start),
+            Frequency::Hourly(hourly) => hourly.is_series_event(instant, series_start),
+            Frequency::Daily(daily) => daily.is_series_event(instant, series_start),
             Frequency::DayOfYear(day_of_year) => instant.day_of_year() == *day_of_year,
             Frequency::DayOfMonth(day_of_month) => instant.day() == *day_of_month,
             Frequency::LastOfMonth => instant.day() == instant.last_of_month().day(),
             Frequency::LastOfYear => instant.day() == instant.last_of_year().day(),
             Frequency::Weekday(weekday) => instant.weekday() == *weekday,
+        }
+    }
+
+    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        match self {
+            Frequency::Secondly(secondly) => secondly.align_to_series(instant, series_start),
+            Frequency::Minutely(minutely) => minutely.align_to_series(instant, series_start),
+            Frequency::Hourly(hourly) => hourly.align_to_series(instant, series_start),
+            Frequency::Daily(daily) => daily.align_to_series(instant, series_start),
+            _ => unimplemented!(),
         }
     }
 }
