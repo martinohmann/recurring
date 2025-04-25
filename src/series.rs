@@ -70,15 +70,18 @@ where
         }
 
         let previous = self.event_before(instant)?;
-        let end = previous.end().unwrap_or(previous.start());
 
-        if end > instant { Some(previous) } else { None }
+        if previous.contains(instant) {
+            Some(previous)
+        } else {
+            None
+        }
     }
 
     pub fn event_after(&self, instant: DateTime) -> Option<Event> {
         let mut start = self.align_to_series(instant)?;
 
-        if start <= instant {
+        if instant > start {
             start = self.repeat.next_event(start)?;
         }
 
@@ -88,7 +91,7 @@ where
     pub fn event_before(&self, instant: DateTime) -> Option<Event> {
         let mut start = self.align_to_series(instant)?;
 
-        if start >= instant {
+        if instant < start {
             start = self.repeat.previous_event(start)?;
         }
 
@@ -137,19 +140,21 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(start) = self.next_start {
-            if start > self.series.end {
+            let series = &self.series;
+
+            if start > series.end {
                 return None;
             }
 
-            self.next_start = self.series.repeat.next_event(start);
+            self.next_start = series.repeat.next_event(start);
 
             // Handle the case where the series start does not fall into the desired frequency and
             // skip over to the next event right away.
-            if start == self.series.start && !self.series.has_event_at(start) {
+            if start == series.start && !series.has_event_at(start) {
                 return self.next();
             }
 
-            return self.series.make_event(start);
+            return series.make_event(start);
         }
 
         None
