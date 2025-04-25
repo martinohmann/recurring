@@ -15,7 +15,7 @@ pub trait Repeat {
 
 #[derive(Debug, Clone)]
 pub struct Secondly {
-    pub interval: i32,
+    interval: i32,
 }
 
 impl Secondly {
@@ -48,7 +48,7 @@ impl Repeat for Secondly {
 
 #[derive(Debug, Clone)]
 pub struct Minutely {
-    pub interval: i32,
+    interval: i32,
 }
 
 impl Minutely {
@@ -83,7 +83,7 @@ impl Repeat for Minutely {
 
 #[derive(Debug, Clone)]
 pub struct Hourly {
-    pub interval: i32,
+    interval: i32,
 }
 
 impl Hourly {
@@ -120,8 +120,8 @@ impl Repeat for Hourly {
 
 #[derive(Debug, Clone)]
 pub struct Daily {
-    pub interval: i32,
-    pub at: Vec<Time>,
+    interval: i32,
+    at: Vec<Time>,
 }
 
 impl Daily {
@@ -196,4 +196,20 @@ impl Repeat for Daily {
 
         instant.with().time(*self.at.first().unwrap()).build().ok()
     }
+}
+
+pub fn secondly(interval: i32) -> Secondly {
+    Secondly::new(interval)
+}
+
+pub fn minutely(interval: i32) -> Minutely {
+    Minutely::new(interval)
+}
+
+pub fn hourly(interval: i32) -> Hourly {
+    Hourly::new(interval)
+}
+
+pub fn daily(interval: i32) -> Daily {
+    Daily::new(interval)
 }
