@@ -189,6 +189,77 @@ impl Repeat for Daily {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Monthly {
+    interval: i32,
+}
+
+impl Monthly {
+    pub fn new(interval: i32) -> Monthly {
+        Monthly { interval }
+    }
+}
+
+impl Repeat for Monthly {
+    fn next_event(&self, instant: DateTime) -> Option<DateTime> {
+        instant.checked_add(self.interval.months()).ok()
+    }
+
+    fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
+        instant.checked_sub(self.interval.months()).ok()
+    }
+
+    fn aligns_with_series(&self, instant: DateTime, series_start: DateTime) -> bool {
+        instant.time() == series_start.time() && instant.day() == series_start.day()
+    }
+
+    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        instant
+            .with()
+            .day(series_start.day())
+            .time(series_start.time())
+            .build()
+            .ok()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Yearly {
+    interval: i32,
+}
+
+impl Yearly {
+    pub fn new(interval: i32) -> Yearly {
+        Yearly { interval }
+    }
+}
+
+impl Repeat for Yearly {
+    fn next_event(&self, instant: DateTime) -> Option<DateTime> {
+        instant.checked_add(self.interval.years()).ok()
+    }
+
+    fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
+        instant.checked_sub(self.interval.years()).ok()
+    }
+
+    fn aligns_with_series(&self, instant: DateTime, series_start: DateTime) -> bool {
+        instant.time() == series_start.time()
+            && instant.day() == series_start.day()
+            && instant.month() == series_start.month()
+    }
+
+    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        instant
+            .with()
+            .month(series_start.month())
+            .day(series_start.day())
+            .time(series_start.time())
+            .build()
+            .ok()
+    }
+}
+
 pub fn secondly(interval: i32) -> Secondly {
     Secondly::new(interval)
 }
@@ -203,4 +274,12 @@ pub fn hourly(interval: i32) -> Hourly {
 
 pub fn daily(interval: i32) -> Daily {
     Daily::new(interval)
+}
+
+pub fn monthly(interval: i32) -> Monthly {
+    Monthly::new(interval)
+}
+
+pub fn yearly(interval: i32) -> Yearly {
+    Yearly::new(interval)
 }
