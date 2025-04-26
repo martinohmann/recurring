@@ -27,7 +27,7 @@ where
         Iter::new(self)
     }
 
-    pub fn first(&self) -> Option<Event> {
+    pub fn first_event(&self) -> Option<Event> {
         if let Some(event) = self.event_at(self.start) {
             return Some(event);
         }
@@ -37,7 +37,7 @@ where
         self.event_at_unchecked(start)
     }
 
-    pub fn last(&self) -> Option<Event> {
+    pub fn last_event(&self) -> Option<Event> {
         let start = self.repeat.previous_event(self.end)?;
 
         self.event_at_unchecked(start)
@@ -394,7 +394,7 @@ mod tests {
             .end(end)
             .build(daily(2).at(time(2, 2, 2, 2)));
         assert_eq!(
-            series.first(),
+            series.first_event(),
             Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)))
         );
     }
@@ -408,13 +408,13 @@ mod tests {
             .end(end)
             .build(daily(2).at(time(2, 2, 2, 2)));
         assert_eq!(
-            series.last(),
+            series.last_event(),
             Some(Event::at(datetime(2025, 1, 8, 2, 2, 2, 2)))
         );
 
         let series = Series::new(daily(2).at(time(2, 2, 2, 2)), start);
         assert_eq!(
-            series.last(),
+            series.last_event(),
             Some(Event::at(datetime(9999, 12, 31, 2, 2, 2, 2)))
         );
     }
