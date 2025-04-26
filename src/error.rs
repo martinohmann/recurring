@@ -10,9 +10,7 @@ impl core::fmt::Display for Error {
         match self {
             Error::InvalidEventEnd => f.write_str("event end must be greater than start"),
             Error::InvalidSeriesEnd => f.write_str("series end must be greater than start"),
-            Error::InvalidEventDuration => {
-                f.write_str("event duration must be non-zero and positive")
-            }
+            Error::InvalidEventDuration => f.write_str("event duration must be positive"),
         }
     }
 }

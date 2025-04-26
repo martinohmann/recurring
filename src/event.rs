@@ -8,7 +8,9 @@ pub struct Event {
 }
 
 impl Event {
-    /// Creates a new `Event` which start at `instant` without an end date.
+    /// Creates a new `Event` which starts and ends at `instant`.
+    ///
+    /// The event duration is effectively zero.
     pub fn at(instant: DateTime) -> Event {
         Event {
             start: instant,
@@ -16,23 +18,18 @@ impl Event {
         }
     }
 
+    /// Creates a new `Event` which span from a `start` (inclusive) to an `end` (exclusive).
+    ///
     /// # Errors
     ///
-    /// Returns `Error::InvalidEventEnd` if `end <= start`.
+    /// Returns `Error::InvalidEventEnd` if `start >= end`.
     pub fn new(start: DateTime, end: DateTime) -> Result<Event, Error> {
-        Event::at(start).ends_at(end)
-    }
-
-    /// # Errors
-    ///
-    /// Returns `Error::InvalidEventEnd` if `end` is less than or equal to the `Event`'s `start`.
-    pub fn ends_at(self, end: DateTime) -> Result<Event, Error> {
-        if end <= self.start {
+        if start >= end {
             return Err(Error::InvalidEventEnd);
         }
 
         Ok(Event {
-            start: self.start,
+            start,
             end: Some(end),
         })
     }
@@ -45,15 +42,15 @@ impl Event {
         self.end
     }
 
-    pub fn duration(&self) -> SignedDuration {
-        self.end
-            .map_or(SignedDuration::ZERO, |end| self.start.duration_until(end))
+    pub fn duration(&self) -> Option<SignedDuration> {
+        self.end.map(|end| self.start.duration_until(end))
     }
 
     pub fn contains(&self, instant: DateTime) -> bool {
-        match self.end {
-            Some(end) => instant >= self.start && instant < end,
-            None => instant == self.start,
+        if let Some(end) = self.end {
+            instant >= self.start && instant < end
+        } else {
+            instant == self.start
         }
     }
 }
@@ -69,21 +66,20 @@ mod tests {
         let event = Event::at(start);
         assert_eq!(event.start(), start);
         assert!(event.end().is_none());
-        assert_eq!(event.duration(), SignedDuration::ZERO);
+        assert!(event.duration().is_none());
 
         let end = datetime(2025, 1, 2, 0, 0, 0, 0);
-        let event = event.ends_at(end).unwrap();
+        let event = Event::new(start, end).unwrap();
         assert_eq!(event.start(), start);
         assert_eq!(event.end(), Some(end));
-        assert_eq!(event.duration(), SignedDuration::from_hours(24));
+        assert_eq!(event.duration(), Some(SignedDuration::from_hours(24)));
     }
 
     #[test]
-    #[should_panic]
     fn event_end_before_start() {
         let start = datetime(2025, 1, 2, 0, 0, 0, 0);
         let end = datetime(2025, 1, 1, 0, 0, 0, 0);
-        Event::new(start, end).unwrap();
+        assert!(Event::new(start, end).is_err());
     }
 
     #[test]
@@ -95,7 +91,7 @@ mod tests {
         assert!(!event.contains(start + 1.nanosecond()));
 
         let end = datetime(2025, 1, 2, 0, 0, 0, 0);
-        let event = event.ends_at(end).unwrap();
+        let event = Event::new(start, end).unwrap();
         assert!(event.contains(start));
         assert!(event.contains(start + 1.nanosecond()));
         assert!(event.contains(end - 1.nanosecond()));

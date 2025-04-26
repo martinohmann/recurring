@@ -6,7 +6,7 @@ pub struct Series<R> {
     repeat: R,
     start: DateTime,
     end: DateTime,
-    event_duration: Option<Span>,
+    event_duration: Span,
 }
 
 impl Series<()> {
@@ -61,8 +61,8 @@ where
     }
 
     fn event_at_unchecked(&self, start: DateTime) -> Option<Event> {
-        if let Some(duration) = self.event_duration {
-            let end = start.checked_add(duration).ok()?;
+        if self.event_duration.is_positive() {
+            let end = start.checked_add(self.event_duration).ok()?;
             return Event::new(start, end).ok();
         }
 
@@ -183,29 +183,28 @@ impl SeriesBuilder {
     /// # Errors
     ///
     /// Returns an `Error` if the configured `end` is less than or equal to `start`, or if the
-    /// configured `event_duration` is negative or zero.
+    /// configured `event_duration` is negative.
     pub fn build<R>(self, repeat: R) -> Result<Series<R>, Error>
     where
         R: Repeat,
     {
         let start = self.start.unwrap_or_else(|| Zoned::now().datetime());
         let end = self.end.unwrap_or(DateTime::MAX);
+        let event_duration = self.event_duration.unwrap_or_default();
 
         if end <= start {
             return Err(Error::InvalidSeriesEnd);
         }
 
-        if let Some(event_duration) = self.event_duration {
-            if !event_duration.is_positive() {
-                return Err(Error::InvalidEventDuration);
-            }
+        if event_duration.is_negative() {
+            return Err(Error::InvalidEventDuration);
         }
 
         Ok(Series {
             repeat,
             start,
             end,
-            event_duration: self.event_duration,
+            event_duration,
         })
     }
 }
@@ -324,15 +323,21 @@ mod tests {
 
         let events: Vec<_> = series.iter().collect();
         let expected = vec![
-            Event::at(datetime(2025, 1, 1, 1, 1, 1, 0))
-                .ends_at(datetime(2025, 1, 1, 2, 1, 1, 0))
-                .unwrap(),
-            Event::at(datetime(2025, 1, 3, 1, 1, 1, 0))
-                .ends_at(datetime(2025, 1, 3, 2, 1, 1, 0))
-                .unwrap(),
-            Event::at(datetime(2025, 1, 5, 1, 1, 1, 0))
-                .ends_at(datetime(2025, 1, 5, 2, 1, 1, 0))
-                .unwrap(),
+            Event::new(
+                datetime(2025, 1, 1, 1, 1, 1, 0),
+                datetime(2025, 1, 1, 2, 1, 1, 0),
+            )
+            .unwrap(),
+            Event::new(
+                datetime(2025, 1, 3, 1, 1, 1, 0),
+                datetime(2025, 1, 3, 2, 1, 1, 0),
+            )
+            .unwrap(),
+            Event::new(
+                datetime(2025, 1, 5, 1, 1, 1, 0),
+                datetime(2025, 1, 5, 2, 1, 1, 0),
+            )
+            .unwrap(),
         ];
         assert_eq!(events, expected);
     }
