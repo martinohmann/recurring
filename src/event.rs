@@ -1,3 +1,4 @@
+use crate::Error;
 use jiff::{SignedDuration, civil::DateTime};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -7,6 +8,7 @@ pub struct Event {
 }
 
 impl Event {
+    /// Creates a new `Event` which start at `instant` without an end date.
     pub fn at(instant: DateTime) -> Event {
         Event {
             start: instant,
@@ -14,23 +16,25 @@ impl Event {
         }
     }
 
-    /// # Panics
+    /// # Errors
     ///
-    /// If `end < start`, this function panics.
-    pub fn new(start: DateTime, end: DateTime) -> Event {
+    /// Returns `Error::InvalidEventEnd` if `end <= start`.
+    pub fn new(start: DateTime, end: DateTime) -> Result<Event, Error> {
         Event::at(start).ends_at(end)
     }
 
-    /// # Panics
+    /// # Errors
     ///
-    /// If `end` is less than the `Event`'s `start`, this method panics.
-    #[must_use]
-    pub fn ends_at(self, end: DateTime) -> Event {
-        assert!(end >= self.start, "event end < start");
-        Event {
+    /// Returns `Error::InvalidEventEnd` if `end` is less than or equal to the `Event`'s `start`.
+    pub fn ends_at(self, end: DateTime) -> Result<Event, Error> {
+        if end <= self.start {
+            return Err(Error::InvalidEventEnd);
+        }
+
+        Ok(Event {
             start: self.start,
             end: Some(end),
-        }
+        })
     }
 
     pub fn start(&self) -> DateTime {
@@ -68,7 +72,7 @@ mod tests {
         assert_eq!(event.duration(), SignedDuration::ZERO);
 
         let end = datetime(2025, 1, 2, 0, 0, 0, 0);
-        let event = event.ends_at(end);
+        let event = event.ends_at(end).unwrap();
         assert_eq!(event.start(), start);
         assert_eq!(event.end(), Some(end));
         assert_eq!(event.duration(), SignedDuration::from_hours(24));
@@ -79,7 +83,7 @@ mod tests {
     fn event_end_before_start() {
         let start = datetime(2025, 1, 2, 0, 0, 0, 0);
         let end = datetime(2025, 1, 1, 0, 0, 0, 0);
-        Event::new(start, end);
+        Event::new(start, end).unwrap();
     }
 
     #[test]
@@ -91,7 +95,7 @@ mod tests {
         assert!(!event.contains(start + 1.nanosecond()));
 
         let end = datetime(2025, 1, 2, 0, 0, 0, 0);
-        let event = event.ends_at(end);
+        let event = event.ends_at(end).unwrap();
         assert!(event.contains(start));
         assert!(event.contains(start + 1.nanosecond()));
         assert!(event.contains(end - 1.nanosecond()));

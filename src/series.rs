@@ -1,4 +1,4 @@
-use crate::{Event, Repeat};
+use crate::{Error, Event, Repeat};
 use jiff::{Span, Zoned, civil::DateTime};
 
 #[derive(Debug, Clone)]
@@ -19,7 +19,10 @@ impl<R> Series<R>
 where
     R: Repeat,
 {
-    pub fn new(repeat: R, start: DateTime) -> Series<R> {
+    /// # Errors
+    ///
+    /// Returns an `Error` if `start` is `DateTime::MAX`.
+    pub fn new(repeat: R, start: DateTime) -> Result<Series<R>, Error> {
         Series::builder().start(start).build(repeat)
     }
 
@@ -58,14 +61,12 @@ where
     }
 
     fn event_at_unchecked(&self, start: DateTime) -> Option<Event> {
-        let mut event = Event::at(start);
-
         if let Some(duration) = self.duration {
             let end = start.checked_add(duration).ok()?;
-            event = event.ends_at(end);
+            return Event::new(start, end).ok();
         }
 
-        Some(event)
+        Some(Event::at(start))
     }
 
     pub fn event_containing(&self, instant: DateTime) -> Option<Event> {
@@ -156,32 +157,56 @@ pub struct SeriesBuilder {
 }
 
 impl SeriesBuilder {
+    /// Creates a new `SeriesBuilder` with default options.
     pub fn new() -> SeriesBuilder {
         SeriesBuilder::default()
     }
 
+    #[must_use]
     pub fn start(mut self, start: DateTime) -> SeriesBuilder {
         self.start = Some(start);
         self
     }
 
+    #[must_use]
     pub fn end(mut self, end: DateTime) -> SeriesBuilder {
         self.end = Some(end);
         self
     }
 
+    #[must_use]
     pub fn duration(mut self, duration: Span) -> SeriesBuilder {
         self.duration = Some(duration);
         self
     }
 
-    pub fn build<R: Repeat>(self, repeat: R) -> Series<R> {
-        Series {
-            repeat,
-            start: self.start.unwrap_or_else(|| Zoned::now().datetime()),
-            end: self.end.unwrap_or(DateTime::MAX),
-            duration: self.duration,
+    /// # Errors
+    ///
+    /// Returns an `Error` if the configured `end` is less than or equal to `start`, or if the
+    /// configured event `duration` is negative or zero.
+    pub fn build<R>(self, repeat: R) -> Result<Series<R>, Error>
+    where
+        R: Repeat,
+    {
+        let start = self.start.unwrap_or_else(|| Zoned::now().datetime());
+        let end = self.end.unwrap_or(DateTime::MAX);
+
+        if end <= start {
+            return Err(Error::InvalidSeriesEnd);
         }
+
+        if let Some(duration) = self.duration {
+            if !duration.is_positive() {
+                return Err(Error::InvalidEventDuration);
+            }
+        }
+
+        Ok(Series {
+            repeat,
+            start,
+            end,
+            duration: self.duration,
+        })
     }
 }
 
@@ -238,7 +263,7 @@ mod tests {
     #[test]
     fn daily_series() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-        let series = Series::new(daily(2), start);
+        let series = Series::new(daily(2), start).unwrap();
         let events: Vec<_> = series.iter().take(5).collect();
         let expected = vec![
             Event::at(datetime(2025, 1, 1, 1, 1, 1, 0)),
@@ -253,7 +278,8 @@ mod tests {
     #[test]
     fn daily_series_at() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-        let series = Series::new(daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)), start);
+        let series =
+            Series::new(daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)), start).unwrap();
         let events: Vec<_> = series.iter().take(5).collect();
         let expected = vec![
             Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)),
@@ -269,7 +295,11 @@ mod tests {
     fn daily_series_with_end() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 5, 1, 1, 1, 0);
-        let series = Series::builder().start(start).end(end).build(daily(2));
+        let series = Series::builder()
+            .start(start)
+            .end(end)
+            .build(daily(2))
+            .unwrap();
         let events: Vec<_> = series.iter().collect();
         let expected = vec![
             Event::at(datetime(2025, 1, 1, 1, 1, 1, 0)),
@@ -287,13 +317,20 @@ mod tests {
             .start(start)
             .end(end)
             .duration(1.hour())
-            .build(daily(2));
+            .build(daily(2))
+            .unwrap();
 
         let events: Vec<_> = series.iter().collect();
         let expected = vec![
-            Event::at(datetime(2025, 1, 1, 1, 1, 1, 0)).ends_at(datetime(2025, 1, 1, 2, 1, 1, 0)),
-            Event::at(datetime(2025, 1, 3, 1, 1, 1, 0)).ends_at(datetime(2025, 1, 3, 2, 1, 1, 0)),
-            Event::at(datetime(2025, 1, 5, 1, 1, 1, 0)).ends_at(datetime(2025, 1, 5, 2, 1, 1, 0)),
+            Event::at(datetime(2025, 1, 1, 1, 1, 1, 0))
+                .ends_at(datetime(2025, 1, 1, 2, 1, 1, 0))
+                .unwrap(),
+            Event::at(datetime(2025, 1, 3, 1, 1, 1, 0))
+                .ends_at(datetime(2025, 1, 3, 2, 1, 1, 0))
+                .unwrap(),
+            Event::at(datetime(2025, 1, 5, 1, 1, 1, 0))
+                .ends_at(datetime(2025, 1, 5, 2, 1, 1, 0))
+                .unwrap(),
         ];
         assert_eq!(events, expected);
     }
@@ -301,7 +338,8 @@ mod tests {
     #[test]
     fn series_has_event_at() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-        let series = Series::new(daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)), start);
+        let series =
+            Series::new(daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)), start).unwrap();
         assert!(!series.has_event_at(datetime(2025, 1, 1, 1, 1, 1, 0)));
         assert!(series.has_event_at(datetime(2025, 1, 1, 2, 2, 2, 2)));
         assert!(series.has_event_at(datetime(2025, 1, 1, 3, 3, 3, 3)));
@@ -316,7 +354,8 @@ mod tests {
         let series = Series::builder()
             .start(start)
             .end(end)
-            .build(daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)));
+            .build(daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)))
+            .unwrap();
         assert_eq!(series.event_at(datetime(2025, 1, 1, 1, 1, 1, 0)), None);
         assert_eq!(
             series.event_at(datetime(2025, 1, 1, 2, 2, 2, 2)),
@@ -343,7 +382,8 @@ mod tests {
         let series = Series::builder()
             .start(start)
             .end(end)
-            .build(daily(2).at(time(2, 2, 2, 2)));
+            .build(daily(2).at(time(2, 2, 2, 2)))
+            .unwrap();
         assert_eq!(
             series.event_containing(datetime(2025, 1, 1, 1, 1, 1, 0)),
             None
@@ -361,22 +401,29 @@ mod tests {
             .start(start)
             .end(end)
             .duration(1.hour())
-            .build(daily(2).at(time(2, 2, 2, 2)));
+            .build(daily(2).at(time(2, 2, 2, 2)))
+            .unwrap();
 
         assert_eq!(
             series.event_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
-            Some(Event::new(
-                datetime(2025, 1, 1, 2, 2, 2, 2),
-                datetime(2025, 1, 1, 3, 2, 2, 2)
-            ))
+            Some(
+                Event::new(
+                    datetime(2025, 1, 1, 2, 2, 2, 2),
+                    datetime(2025, 1, 1, 3, 2, 2, 2)
+                )
+                .unwrap()
+            )
         );
 
         assert_eq!(
             series.event_containing(datetime(2025, 1, 1, 3, 2, 2, 1)),
-            Some(Event::new(
-                datetime(2025, 1, 1, 2, 2, 2, 2),
-                datetime(2025, 1, 1, 3, 2, 2, 2)
-            ))
+            Some(
+                Event::new(
+                    datetime(2025, 1, 1, 2, 2, 2, 2),
+                    datetime(2025, 1, 1, 3, 2, 2, 2)
+                )
+                .unwrap()
+            )
         );
 
         assert_eq!(
@@ -386,13 +433,14 @@ mod tests {
     }
 
     #[test]
-    fn series_first() {
+    fn series_first_event() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 3, 1, 1, 1, 0);
         let series = Series::builder()
             .start(start)
             .end(end)
-            .build(daily(2).at(time(2, 2, 2, 2)));
+            .build(daily(2).at(time(2, 2, 2, 2)))
+            .unwrap();
         assert_eq!(
             series.first_event(),
             Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)))
@@ -400,19 +448,20 @@ mod tests {
     }
 
     #[test]
-    fn series_last() {
+    fn series_last_event() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 10, 1, 1, 1, 0);
         let series = Series::builder()
             .start(start)
             .end(end)
-            .build(daily(2).at(time(2, 2, 2, 2)));
+            .build(daily(2).at(time(2, 2, 2, 2)))
+            .unwrap();
         assert_eq!(
             series.last_event(),
             Some(Event::at(datetime(2025, 1, 8, 2, 2, 2, 2)))
         );
 
-        let series = Series::new(daily(2).at(time(2, 2, 2, 2)), start);
+        let series = Series::new(daily(2).at(time(2, 2, 2, 2)), start).unwrap();
         assert_eq!(
             series.last_event(),
             Some(Event::at(datetime(9999, 12, 31, 2, 2, 2, 2)))
@@ -422,7 +471,7 @@ mod tests {
     #[test]
     fn series_closest_event() {
         let start = datetime(2025, 1, 1, 0, 0, 0, 0);
-        let series = Series::new(hourly(1), start);
+        let series = Series::new(hourly(1), start).unwrap();
 
         assert_eq!(
             series.closest_event(datetime(2024, 12, 31, 0, 0, 0, 0)),

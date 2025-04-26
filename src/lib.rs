@@ -2,12 +2,14 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::must_use_candidate)]
 
+mod error;
 mod event;
 pub mod repeat;
 mod series;
 
+pub use self::error::Error;
 pub use self::event::Event;
-pub use self::series::{Iter, Series};
+pub use self::series::{Iter, Series, SeriesBuilder};
 use jiff::civil::DateTime;
 
 pub trait Repeat {
