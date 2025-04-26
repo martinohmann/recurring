@@ -49,7 +49,7 @@ where
     pub fn has_event_at(&self, instant: DateTime) -> bool {
         instant >= self.start
             && instant < self.end
-            && self.repeat.aligns_with_series(instant, self.start)
+            && self.repeat.is_event_start(instant, self.start)
     }
 
     pub fn event_at(&self, instant: DateTime) -> Option<Event> {
@@ -84,7 +84,7 @@ where
     }
 
     pub fn event_after(&self, instant: DateTime) -> Option<Event> {
-        let mut start = self.align_to_series(instant)?;
+        let mut start = self.align_to_event_start(instant)?;
 
         if start <= instant {
             start = self.repeat.next_event(start)?;
@@ -94,7 +94,7 @@ where
     }
 
     pub fn event_before(&self, instant: DateTime) -> Option<Event> {
-        let mut start = self.align_to_series(instant)?;
+        let mut start = self.align_to_event_start(instant)?;
 
         if start >= instant {
             start = self.repeat.previous_event(start)?;
@@ -122,15 +122,15 @@ where
         }
     }
 
-    fn align_to_series(&self, instant: DateTime) -> Option<DateTime> {
-        let aligned = self.repeat.align_to_series(instant, self.start)?;
+    fn align_to_event_start(&self, instant: DateTime) -> Option<DateTime> {
+        let aligned = self.repeat.align_to_event_start(instant, self.start)?;
 
         if aligned < self.start {
-            return self.repeat.align_to_series(self.start, self.start);
+            return self.repeat.align_to_event_start(self.start, self.start);
         }
 
         if aligned > self.end {
-            return self.repeat.align_to_series(self.end, self.start);
+            return self.repeat.align_to_event_start(self.end, self.start);
         }
 
         Some(aligned)

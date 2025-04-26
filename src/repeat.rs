@@ -25,11 +25,11 @@ impl Repeat for Secondly {
         instant.checked_sub(self.interval.seconds()).ok()
     }
 
-    fn aligns_with_series(&self, instant: DateTime, series_start: DateTime) -> bool {
+    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
         instant.subsec_nanosecond() == series_start.subsec_nanosecond()
     }
 
-    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
         instant
             .with()
             .subsec_nanosecond(series_start.subsec_nanosecond())
@@ -58,12 +58,12 @@ impl Repeat for Minutely {
         instant.checked_sub(self.interval.minutes()).ok()
     }
 
-    fn aligns_with_series(&self, instant: DateTime, series_start: DateTime) -> bool {
+    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
         instant.second() == series_start.second()
             && instant.subsec_nanosecond() == series_start.subsec_nanosecond()
     }
 
-    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
         instant
             .with()
             .second(series_start.second())
@@ -93,13 +93,13 @@ impl Repeat for Hourly {
         instant.checked_sub(self.interval.hours()).ok()
     }
 
-    fn aligns_with_series(&self, instant: DateTime, series_start: DateTime) -> bool {
+    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
         instant.minute() == series_start.minute()
             && instant.second() == series_start.second()
             && instant.subsec_nanosecond() == series_start.subsec_nanosecond()
     }
 
-    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
         instant
             .with()
             .minute(series_start.minute())
@@ -169,7 +169,7 @@ impl Repeat for Daily {
         }
     }
 
-    fn aligns_with_series(&self, instant: DateTime, series_start: DateTime) -> bool {
+    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
         if self.at.is_empty() {
             return instant.time() == series_start.time();
         }
@@ -181,7 +181,7 @@ impl Repeat for Daily {
             == Some(instant)
     }
 
-    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
         if self.at.is_empty() {
             return instant.with().time(series_start.time()).build().ok();
         }
@@ -210,11 +210,11 @@ impl Repeat for Monthly {
         instant.checked_sub(self.interval.months()).ok()
     }
 
-    fn aligns_with_series(&self, instant: DateTime, series_start: DateTime) -> bool {
+    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
         instant.time() == series_start.time() && instant.day() == series_start.day()
     }
 
-    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
         instant
             .with()
             .day(series_start.day())
@@ -244,13 +244,13 @@ impl Repeat for Yearly {
         instant.checked_sub(self.interval.years()).ok()
     }
 
-    fn aligns_with_series(&self, instant: DateTime, series_start: DateTime) -> bool {
+    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
         instant.time() == series_start.time()
             && instant.day() == series_start.day()
             && instant.month() == series_start.month()
     }
 
-    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
         instant
             .with()
             .month(series_start.month())
