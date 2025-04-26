@@ -50,7 +50,7 @@ where
     pub fn has_event_at(&self, instant: DateTime) -> bool {
         instant >= self.start
             && instant < self.end
-            && self.repeat.is_series_event(instant, self.start)
+            && self.repeat.aligns_with_series(instant, self.start)
     }
 
     pub fn event_at(&self, start: DateTime) -> Option<Event> {
