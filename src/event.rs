@@ -1,6 +1,29 @@
 use crate::Error;
 use jiff::{SignedDuration, civil::DateTime};
 
+/// Represents an event that happens at a given point in time and may span until an optional end
+/// datetime.
+///
+/// Single instant events can be created via [`Event::at`], while [`Event::new`] can be used to
+/// construct events with an explict end.
+///
+/// # Example
+///
+/// ```
+/// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+/// # use recurring::Event;
+/// use jiff::SignedDuration;
+/// use jiff::civil::date;
+///
+/// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+/// let end = date(2025, 1, 2).at(0, 0, 0, 0);
+/// let event = Event::new(start, end)?;
+/// assert_eq!(event.start(), start);
+/// assert_eq!(event.end(), Some(end));
+/// assert_eq!(event.duration(), Some(SignedDuration::from_hours(24)));
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Event {
     start: DateTime,
@@ -11,6 +34,16 @@ impl Event {
     /// Creates a new `Event` which starts and ends at `instant`.
     ///
     /// The event duration is effectively zero.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use recurring::Event;
+    /// use jiff::civil::date;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let event = Event::at(start);
+    /// ```
     pub fn at(instant: DateTime) -> Event {
         Event {
             start: instant,
@@ -23,6 +56,20 @@ impl Event {
     /// # Errors
     ///
     /// Returns `Error::InvalidEventEnd` if `start >= end`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// # use recurring::Event;
+    /// use jiff::civil::date;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
+    /// let event = Event::new(start, end)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new(start: DateTime, end: DateTime) -> Result<Event, Error> {
         if start >= end {
             return Err(Error::InvalidEventEnd);
@@ -34,18 +81,98 @@ impl Event {
         })
     }
 
+    /// Returns the `DateTime` at which the event starts.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use recurring::Event;
+    /// use jiff::civil::date;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let event = Event::at(start);
+    /// assert_eq!(event.start(), start);
+    /// ```
     pub fn start(&self) -> DateTime {
         self.start
     }
 
+    /// Returns the `DateTime` at which the event end if it has an end, `None` otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// # use recurring::Event;
+    /// use jiff::civil::date;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let event = Event::at(start);
+    /// assert!(event.end().is_none());
+    ///
+    /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
+    /// let event = Event::new(start, end)?;
+    /// assert_eq!(event.end(), Some(end));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn end(&self) -> Option<DateTime> {
         self.end
     }
 
+    /// Returns the duration between the events' start and end if it has an end, `None` otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// # use recurring::Event;
+    /// use jiff::SignedDuration;
+    /// use jiff::civil::date;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let event = Event::at(start);
+    /// assert!(event.duration().is_none());
+    ///
+    /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
+    /// let event = Event::new(start, end)?;
+    /// assert_eq!(event.duration(), Some(SignedDuration::from_hours(24)));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn duration(&self) -> Option<SignedDuration> {
         self.end.map(|end| self.start.duration_until(end))
     }
 
+    /// Returns `true` if `instant` falls within the events' duration, `false` otherwise.
+    ///
+    /// For events that don't have an end, this is equivalent to `event.start() == instant`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// # use recurring::Event;
+    /// use jiff::ToSpan;
+    /// use jiff::civil::date;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let event = Event::at(start);
+    /// assert!(!event.contains(start - 1.nanosecond()));
+    /// assert!(event.contains(start));
+    /// assert!(!event.contains(start + 1.nanosecond()));
+    ///
+    /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
+    /// let event = Event::new(start, end)?;
+    /// assert!(!event.contains(start - 1.nanosecond()));
+    /// assert!(event.contains(start));
+    /// assert!(event.contains(start + 1.nanosecond()));
+    /// assert!(event.contains(end - 1.nanosecond()));
+    /// assert!(!event.contains(end));
+    /// assert!(!event.contains(end + 1.nanosecond()));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn contains(&self, instant: DateTime) -> bool {
         if let Some(end) = self.end {
             instant >= self.start && instant < end
@@ -58,45 +185,12 @@ impl Event {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jiff::{ToSpan, civil::datetime};
-
-    #[test]
-    fn event() {
-        let start = datetime(2025, 1, 1, 0, 0, 0, 0);
-        let event = Event::at(start);
-        assert_eq!(event.start(), start);
-        assert!(event.end().is_none());
-        assert!(event.duration().is_none());
-
-        let end = datetime(2025, 1, 2, 0, 0, 0, 0);
-        let event = Event::new(start, end).unwrap();
-        assert_eq!(event.start(), start);
-        assert_eq!(event.end(), Some(end));
-        assert_eq!(event.duration(), Some(SignedDuration::from_hours(24)));
-    }
+    use jiff::civil::date;
 
     #[test]
     fn event_end_before_start() {
-        let start = datetime(2025, 1, 2, 0, 0, 0, 0);
-        let end = datetime(2025, 1, 1, 0, 0, 0, 0);
+        let start = date(2025, 1, 2).at(0, 0, 0, 0);
+        let end = date(2025, 1, 1).at(0, 0, 0, 0);
         assert!(Event::new(start, end).is_err());
-    }
-
-    #[test]
-    fn event_contains() {
-        let start = datetime(2025, 1, 1, 0, 0, 0, 0);
-        let event = Event::at(start);
-        assert!(event.contains(start));
-        assert!(!event.contains(start - 1.nanosecond()));
-        assert!(!event.contains(start + 1.nanosecond()));
-
-        let end = datetime(2025, 1, 2, 0, 0, 0, 0);
-        let event = Event::new(start, end).unwrap();
-        assert!(event.contains(start));
-        assert!(event.contains(start + 1.nanosecond()));
-        assert!(event.contains(end - 1.nanosecond()));
-        assert!(!event.contains(start - 1.nanosecond()));
-        assert!(!event.contains(end));
-        assert!(!event.contains(end + 1.nanosecond()));
     }
 }
