@@ -45,6 +45,27 @@ where
         Series::builder().start(start).build(repeat)
     }
 
+    /// Creates an iterator over the events in a the series.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::civil::date;
+    /// use recurring::{Event, Series};
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series = Series::builder()
+    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
+    ///     .build(hourly(2))?;
+    ///
+    /// let mut events = series.iter();
+    ///
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn iter(&self) -> Iter<'_, R> {
         Iter::new(self)
     }
@@ -296,6 +317,10 @@ impl SeriesBuilder {
     }
 }
 
+/// An iterator over the events of a [`Series`].
+///
+/// This struct is created by the [`.iter()`][Series::iter] method of a `Series`. See its
+/// documentation for more.
 #[derive(Debug, Clone)]
 pub struct Iter<'a, R> {
     series: &'a Series<R>,

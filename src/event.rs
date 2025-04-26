@@ -192,8 +192,6 @@ impl Event {
     ///
     /// ```
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// # extern crate alloc;
-    /// # use alloc::vec::Vec;
     /// # use recurring::Event;
     /// use recurring::repeat::hourly;
     /// use jiff::ToSpan;
