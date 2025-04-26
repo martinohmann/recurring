@@ -206,12 +206,10 @@ impl Event {
     /// let event = Event::new(start, end)?;
     /// let series = event.to_series(hourly(2))?;
     ///
-    /// let events: Vec<_> = series.iter().take(2).collect();
-    /// let expected = vec![
-    ///     Event::new(date.at(0, 0, 0, 0), date.at(0, 30, 0, 0))?,
-    ///     Event::new(date.at(2, 0, 0, 0), date.at(2, 30, 0, 0))?
-    /// ];
-    /// assert_eq!(events, expected);
+    /// let mut events = series.iter();
+    ///
+    /// assert_eq!(events.next(), Some(Event::new(date.at(0, 0, 0, 0), date.at(0, 30, 0, 0))?));
+    /// assert_eq!(events.next(), Some(Event::new(date.at(2, 0, 0, 0), date.at(2, 30, 0, 0))?));
     /// # Ok(())
     /// # }
     /// ```
