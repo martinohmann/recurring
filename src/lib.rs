@@ -1,6 +1,9 @@
+#![no_std]
 #![allow(missing_docs)] // @TODO(mohmann): enable warnings once API is fleshed out.
 #![warn(clippy::pedantic)]
 #![allow(clippy::must_use_candidate)]
+
+extern crate alloc;
 
 mod error;
 mod event;

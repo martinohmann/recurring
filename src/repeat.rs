@@ -1,4 +1,5 @@
 use crate::Repeat;
+use alloc::vec::Vec;
 use jiff::{
     ToSpan,
     civil::{DateTime, Time},

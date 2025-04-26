@@ -255,6 +255,8 @@ where
 mod tests {
     use super::*;
     use crate::repeat::{daily, hourly};
+    use alloc::vec;
+    use alloc::vec::Vec;
     use jiff::{
         ToSpan,
         civil::{datetime, time},
