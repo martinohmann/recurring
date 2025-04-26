@@ -1,17 +1,8 @@
+use crate::Repeat;
 use jiff::{
     ToSpan,
     civil::{DateTime, Time},
 };
-
-pub trait Repeat {
-    fn next_event(&self, instant: DateTime) -> Option<DateTime>;
-
-    fn previous_event(&self, instant: DateTime) -> Option<DateTime>;
-
-    fn aligns_with_series(&self, instant: DateTime, series_start: DateTime) -> bool;
-
-    fn align_to_series(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime>;
-}
 
 #[derive(Debug, Clone)]
 pub struct Secondly {

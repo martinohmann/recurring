@@ -1,6 +1,6 @@
 use jiff::{SignedDuration, civil::DateTime};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Event {
     start: DateTime,
     end: Option<DateTime>,

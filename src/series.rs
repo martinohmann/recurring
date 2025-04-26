@@ -1,4 +1,4 @@
-use crate::{event::Event, repeat::Repeat};
+use crate::{Event, Repeat};
 use jiff::{Span, Zoned, civil::DateTime};
 
 #[derive(Debug, Clone)]
