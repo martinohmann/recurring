@@ -1,6 +1,30 @@
 use crate::{Error, Event, Repeat};
 use jiff::{Span, Zoned, civil::DateTime};
 
+/// A series of recurring events.
+///
+/// # Example
+///
+/// ```
+/// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+/// use jiff::civil::date;
+/// use recurring::{Event, Series};
+/// use recurring::repeat::hourly;
+///
+/// let series = Series::builder()
+///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
+///     .end(date(2025, 1, 1).at(4, 0, 0, 0))
+///     .build(hourly(2))?;
+///
+/// let mut events = series.iter();
+///
+/// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+/// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
+/// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(4, 0, 0, 0))));
+/// assert_eq!(events.next(), None);
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Series<R> {
     repeat: R,
@@ -38,9 +62,30 @@ impl<R> Series<R>
 where
     R: Repeat,
 {
+    /// Convenience method to create a new `Series` starting at `start` that produces events in the
+    /// given `repeat` interval.
+    ///
+    /// This is equivalent to calling `Series::builder().start(start).build(repeat)`.
+    ///
+    /// For more series configuration options consider using the builder provided by
+    /// [`Series::builder`]. See the documentation of [`SeriesBuilder`] for more details.
+    ///
     /// # Errors
     ///
     /// Returns an `Error` if `start` is `DateTime::MAX`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::civil::date;
+    /// # use recurring::Series;
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2))?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new(start: DateTime, repeat: R) -> Result<Series<R>, Error> {
         Series::builder().start(start).build(repeat)
     }
