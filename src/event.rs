@@ -1,5 +1,5 @@
-use crate::Error;
-use jiff::{SignedDuration, civil::DateTime};
+use crate::{Error, Repeat, Series};
+use jiff::{SignedDuration, Span, civil::DateTime};
 
 /// Represents an event that happens at a given point in time and may span until an optional end
 /// datetime.
@@ -179,6 +179,55 @@ impl Event {
         } else {
             instant == self.start
         }
+    }
+
+    /// Converts an event to a `Series` with the given [`Repeat`] interval.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the event duration cannot be represented as a [`Span`] or if the
+    /// events' `start` is `DateTime::MAX`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// # extern crate alloc;
+    /// # use alloc::vec::Vec;
+    /// # use recurring::Event;
+    /// use recurring::repeat::hourly;
+    /// use jiff::ToSpan;
+    /// use jiff::civil::date;
+    ///
+    /// let date = date(2025, 1, 1);
+    /// let start = date.at(0, 0, 0, 0);
+    /// let end = date.at(0, 30, 0, 0);
+    ///
+    /// let event = Event::new(start, end)?;
+    /// let series = event.to_series(hourly(2))?;
+    ///
+    /// let events: Vec<_> = series.iter().take(2).collect();
+    /// let expected = vec![
+    ///     Event::new(date.at(0, 0, 0, 0), date.at(0, 30, 0, 0))?,
+    ///     Event::new(date.at(2, 0, 0, 0), date.at(2, 30, 0, 0))?
+    /// ];
+    /// assert_eq!(events, expected);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn to_series<R>(&self, repeat: R) -> Result<Series<R>, Error>
+    where
+        R: Repeat,
+    {
+        let mut builder = Series::builder().start(self.start);
+
+        if let Some(duration) = self.duration() {
+            let event_duration =
+                Span::try_from(duration).map_err(|_| Error::InvalidEventDuration)?;
+            builder = builder.event_duration(event_duration);
+        }
+
+        builder.build(repeat)
     }
 }
 
