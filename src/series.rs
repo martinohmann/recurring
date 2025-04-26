@@ -10,8 +10,27 @@ pub struct Series<R> {
 }
 
 impl Series<()> {
+    /// Creates a new `SeriesBuilder` with default options.
+    ///
+    /// See the type documentation of [`SeriesBuilder`] for more details.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// # use recurring::Series;
+    /// use jiff::civil::date;
+    /// use recurring::repeat::daily;
+    ///
+    /// let series = Series::builder()
+    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
+    ///     .end(date(2026, 1, 1).at(0, 0, 0, 0))
+    ///     .build(daily(1))?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn builder() -> SeriesBuilder {
-        SeriesBuilder::new()
+        SeriesBuilder::default()
     }
 }
 
@@ -149,6 +168,22 @@ where
     }
 }
 
+/// A builder for [`Series`] values.
+///
+/// Values of this type are produced by [`Series::builder`]. The `SeriesBuilder` can be
+/// materialized into a `Series` by calling its [`.build()`](SeriesBuilder::build) method with the
+/// desired repeat interval for the event series.
+///
+/// The builder allows to configure the following optional parameters for a `Series`:
+///
+/// - `start`: The datetime at which the series starts. This is not necessarily identical to the
+///   start of the first event in the series. The default value is the current datetime upon
+///   calling the [`SeriesBuilder::build`].
+/// - `end`: The datetime at which the series ends. The default is [`DateTime::MAX`], which means
+///   that it only ends when events become unrepresentable as `DateTime`.
+/// - `event_duration`: The [`Span`] of an individual event in the series. This could be minutes,
+///   hours, days or any other duration the `Span` type supports. If `event_duration` is not set,
+///   individual events will not have an end datetime and have an effective duration of zero.
 #[derive(Debug, Clone, Default)]
 pub struct SeriesBuilder {
     start: Option<DateTime>,
@@ -157,33 +192,85 @@ pub struct SeriesBuilder {
 }
 
 impl SeriesBuilder {
-    /// Creates a new `SeriesBuilder` with default options.
-    pub fn new() -> SeriesBuilder {
-        SeriesBuilder::default()
-    }
-
+    /// Sets the start of the series.
+    ///
+    /// If `.start()` is not called with a custom value, the `.build()` method will set the start
+    /// of the series to the current datetime.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use recurring::Series;
+    /// use jiff::civil::date;
+    ///
+    /// let builder = Series::builder().start(date(2025, 1, 1).at(0, 0, 0, 0));
+    /// ```
     #[must_use]
     pub fn start(mut self, start: DateTime) -> SeriesBuilder {
         self.start = Some(start);
         self
     }
 
+    /// Sets the end of the series.
+    ///
+    /// The end of the series defaults to [`DateTime::MAX`] if `.end()` is not called with a custom
+    /// value.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use recurring::Series;
+    /// use jiff::civil::date;
+    ///
+    /// let builder = Series::builder().end(date(2025, 1, 1).at(1, 30, 0, 0));
+    /// ```
     #[must_use]
     pub fn end(mut self, end: DateTime) -> SeriesBuilder {
         self.end = Some(end);
         self
     }
 
+    /// Sets the duration of individual events in the series.
+    ///
+    /// If `.event_duration()` is not called with a custom value, events will not have an end
+    /// datetime.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use recurring::Series;
+    /// use jiff::ToSpan;
+    /// use jiff::civil::date;
+    ///
+    /// let builder = Series::builder().event_duration(1.hour());
+    /// ```
     #[must_use]
     pub fn event_duration(mut self, event_duration: Span) -> SeriesBuilder {
         self.event_duration = Some(event_duration);
         self
     }
 
+    /// Builds a [`Series`] that yields events according to the provided [`Repeat`] implementation.
+    ///
     /// # Errors
     ///
     /// Returns an `Error` if the configured `end` is less than or equal to `start`, or if the
     /// configured `event_duration` is negative.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// # use recurring::Series;
+    /// use jiff::civil::date;
+    /// use recurring::repeat::daily;
+    ///
+    /// let series = Series::builder()
+    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
+    ///     .build(daily(1))?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn build<R>(self, repeat: R) -> Result<Series<R>, Error>
     where
         R: Repeat,
