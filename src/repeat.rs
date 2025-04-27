@@ -2,7 +2,7 @@ use crate::Repeat;
 use alloc::vec::Vec;
 use core::ops::Range;
 use jiff::{
-    Span, SpanTotal, ToSpan, Unit,
+    SpanTotal, ToSpan, Unit,
     civil::{DateTime, Time},
 };
 
@@ -27,7 +27,7 @@ impl Repeat for Secondly {
     }
 
     fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Second)
+        is_aligned_to_series(instant, bounds, self.interval, Unit::Second)
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
@@ -61,7 +61,7 @@ impl Repeat for Minutely {
     }
 
     fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Minute)
+        is_aligned_to_series(instant, bounds, self.interval, Unit::Minute)
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
@@ -96,7 +96,7 @@ impl Repeat for Hourly {
     }
 
     fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Hour)
+        is_aligned_to_series(instant, bounds, self.interval, Unit::Hour)
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
@@ -172,7 +172,7 @@ impl Repeat for Daily {
 
     fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
         if self.at.is_empty() {
-            return duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Day);
+            return is_aligned_to_series(instant, bounds, self.interval, Unit::Day);
         }
 
         instant
@@ -213,7 +213,7 @@ impl Repeat for Monthly {
     }
 
     fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Month)
+        is_aligned_to_series(instant, bounds, self.interval, Unit::Month)
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
@@ -248,7 +248,7 @@ impl Repeat for Yearly {
     }
 
     fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Year)
+        is_aligned_to_series(instant, bounds, self.interval, Unit::Year)
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
@@ -287,13 +287,36 @@ pub fn yearly(interval: i32) -> Yearly {
     Yearly::new(interval)
 }
 
+fn is_aligned_to_series<I: Into<f64>>(
+    instant: DateTime,
+    bounds: &Range<DateTime>,
+    interval: I,
+    unit: Unit,
+) -> bool {
+    bounds.contains(&instant) && duration_is_multiple_of(bounds.start, instant, interval, unit)
+}
+
 fn duration_is_multiple_of<I: Into<f64>>(
     start: DateTime,
     end: DateTime,
     interval: I,
     unit: Unit,
 ) -> bool {
-    Span::try_from(start.duration_until(end).abs())
+    intervals_until(start, end, interval, unit).is_some_and(|intervals| intervals == 0.0)
+}
+
+fn intervals_until<I: Into<f64>>(
+    start: DateTime,
+    end: DateTime,
+    interval: I,
+    unit: Unit,
+) -> Option<f64> {
+    units_until(start, end, unit).map(|total| total % interval.into())
+}
+
+fn units_until(start: DateTime, end: DateTime, unit: Unit) -> Option<f64> {
+    start
+        .until(end)
         .and_then(|span| span.total(SpanTotal::from(unit).days_are_24_hours()))
-        .is_ok_and(|total| total % interval.into() == 0.0)
+        .ok()
 }
