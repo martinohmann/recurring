@@ -10,6 +10,8 @@ mod event;
 pub mod repeat;
 mod series;
 
+use core::ops::Range;
+
 pub use self::error::Error;
 pub use self::event::Event;
 pub use self::series::{Iter, Series, SeriesBuilder};
@@ -20,7 +22,7 @@ pub trait Repeat {
 
     fn previous_event(&self, instant: DateTime) -> Option<DateTime>;
 
-    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool;
+    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool;
 
-    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime>;
+    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime>;
 }

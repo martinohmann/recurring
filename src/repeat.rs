@@ -1,5 +1,6 @@
 use crate::Repeat;
 use alloc::vec::Vec;
+use core::ops::Range;
 use jiff::{
     Span, SpanTotal, ToSpan, Unit,
     civil::{DateTime, Time},
@@ -25,15 +26,15 @@ impl Repeat for Secondly {
         instant.checked_sub(self.interval.seconds()).ok()
     }
 
-    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        duration_is_multiple_of(series_start, instant, self.interval, Unit::Second)
+    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
+        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Second)
     }
 
-    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
         // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
-            .subsec_nanosecond(series_start.subsec_nanosecond())
+            .subsec_nanosecond(bounds.start.subsec_nanosecond())
             .build()
             .ok()
     }
@@ -59,16 +60,16 @@ impl Repeat for Minutely {
         instant.checked_sub(self.interval.minutes()).ok()
     }
 
-    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        duration_is_multiple_of(series_start, instant, self.interval, Unit::Minute)
+    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
+        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Minute)
     }
 
-    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
         // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
-            .second(series_start.second())
-            .subsec_nanosecond(series_start.subsec_nanosecond())
+            .second(bounds.start.second())
+            .subsec_nanosecond(bounds.start.subsec_nanosecond())
             .build()
             .ok()
     }
@@ -94,17 +95,17 @@ impl Repeat for Hourly {
         instant.checked_sub(self.interval.hours()).ok()
     }
 
-    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        duration_is_multiple_of(series_start, instant, self.interval, Unit::Hour)
+    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
+        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Hour)
     }
 
-    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
         // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
-            .minute(series_start.minute())
-            .second(series_start.second())
-            .subsec_nanosecond(series_start.subsec_nanosecond())
+            .minute(bounds.start.minute())
+            .second(bounds.start.second())
+            .subsec_nanosecond(bounds.start.subsec_nanosecond())
             .build()
             .ok()
     }
@@ -169,9 +170,9 @@ impl Repeat for Daily {
         }
     }
 
-    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
+    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
         if self.at.is_empty() {
-            return duration_is_multiple_of(series_start, instant, self.interval, Unit::Day);
+            return duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Day);
         }
 
         instant
@@ -181,10 +182,10 @@ impl Repeat for Daily {
             == Some(instant)
     }
 
-    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
             // @FIXME(mohmann): this does not properly align for intervals > 1.
-            return instant.with().time(series_start.time()).build().ok();
+            return instant.with().time(bounds.start.time()).build().ok();
         }
 
         instant.with().time(*self.at.first().unwrap()).build().ok()
@@ -211,16 +212,16 @@ impl Repeat for Monthly {
         instant.checked_sub(self.interval.months()).ok()
     }
 
-    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        duration_is_multiple_of(series_start, instant, self.interval, Unit::Month)
+    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
+        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Month)
     }
 
-    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
         // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
-            .day(series_start.day())
-            .time(series_start.time())
+            .day(bounds.start.day())
+            .time(bounds.start.time())
             .build()
             .ok()
     }
@@ -246,17 +247,17 @@ impl Repeat for Yearly {
         instant.checked_sub(self.interval.years()).ok()
     }
 
-    fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        duration_is_multiple_of(series_start, instant, self.interval, Unit::Year)
+    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
+        duration_is_multiple_of(bounds.start, instant, self.interval, Unit::Year)
     }
 
-    fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
         // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
-            .month(series_start.month())
-            .day(series_start.day())
-            .time(series_start.time())
+            .month(bounds.start.month())
+            .day(bounds.start.day())
+            .time(bounds.start.time())
             .build()
             .ok()
     }

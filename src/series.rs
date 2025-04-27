@@ -183,7 +183,7 @@ where
     /// # }
     /// ```
     pub fn contains_event(&self, instant: DateTime) -> bool {
-        self.bounds.contains(&instant) && self.repeat.is_event_start(instant, self.bounds.start)
+        self.bounds.contains(&instant) && self.repeat.is_aligned_to_series(instant, &self.bounds)
     }
 
     /// Gets an event in the series.
@@ -239,7 +239,7 @@ where
     }
 
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
-        let mut start = self.align_to_event_start(instant)?;
+        let mut start = self.align_series(instant)?;
 
         if start <= instant {
             start = self.repeat.next_event(start)?;
@@ -249,7 +249,7 @@ where
     }
 
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
-        let mut start = self.align_to_event_start(instant)?;
+        let mut start = self.align_series(instant)?;
 
         if start >= instant {
             start = self.repeat.previous_event(start)?;
@@ -280,17 +280,13 @@ where
         }
     }
 
-    fn align_to_event_start(&self, instant: DateTime) -> Option<DateTime> {
-        let aligned = self
-            .repeat
-            .align_to_event_start(instant, self.bounds.start)?;
+    fn align_series(&self, instant: DateTime) -> Option<DateTime> {
+        let aligned = self.repeat.align_to_series(instant, &self.bounds)?;
 
         if aligned < self.bounds.start {
-            self.repeat
-                .align_to_event_start(self.bounds.start, self.bounds.start)
+            self.repeat.align_to_series(self.bounds.start, &self.bounds)
         } else if aligned >= self.bounds.end {
-            self.repeat
-                .align_to_event_start(self.bounds.end, self.bounds.start)
+            self.repeat.align_to_series(self.bounds.end, &self.bounds)
         } else {
             Some(aligned)
         }
