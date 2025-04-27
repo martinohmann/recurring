@@ -1,5 +1,5 @@
 use crate::{Error, Repeat, Series};
-use jiff::{SignedDuration, Span, civil::DateTime};
+use jiff::{Span, civil::DateTime};
 
 /// Represents an event that happens at a given point in time and may span until an optional end
 /// datetime.
@@ -12,7 +12,7 @@ use jiff::{SignedDuration, Span, civil::DateTime};
 /// ```
 /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
 /// # use recurring::Event;
-/// use jiff::SignedDuration;
+/// use jiff::ToSpan;
 /// use jiff::civil::date;
 ///
 /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
@@ -20,7 +20,7 @@ use jiff::{SignedDuration, Span, civil::DateTime};
 /// let event = Event::new(start, end)?;
 /// assert_eq!(event.start(), start);
 /// assert_eq!(event.end(), Some(end));
-/// assert_eq!(event.duration(), Some(SignedDuration::from_hours(24)));
+/// assert_eq!(event.duration().unwrap().fieldwise(), 1.day());
 /// # Ok(())
 /// # }
 /// ```
@@ -127,7 +127,7 @@ impl Event {
     /// ```
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// # use recurring::Event;
-    /// use jiff::SignedDuration;
+    /// use jiff::ToSpan;
     /// use jiff::civil::date;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
@@ -136,12 +136,12 @@ impl Event {
     ///
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
     /// let event = Event::new(start, end)?;
-    /// assert_eq!(event.duration(), Some(SignedDuration::from_hours(24)));
+    /// assert_eq!(event.duration().unwrap().fieldwise(), 1.day());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn duration(&self) -> Option<SignedDuration> {
-        self.end.map(|end| self.start.duration_until(end))
+    pub fn duration(&self) -> Option<Span> {
+        self.end.and_then(|end| self.start.until(end).ok())
     }
 
     /// Returns `true` if `instant` falls within the events' duration, `false` otherwise.
@@ -218,9 +218,7 @@ impl Event {
         let mut builder = Series::builder().start(self.start);
 
         if let Some(duration) = self.duration() {
-            let event_duration =
-                Span::try_from(duration).map_err(|_| Error::InvalidEventDuration)?;
-            builder = builder.event_duration(event_duration);
+            builder = builder.event_duration(duration);
         }
 
         builder.build(repeat)
