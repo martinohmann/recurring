@@ -116,36 +116,36 @@ where
     }
 
     pub fn first_event(&self) -> Option<Event> {
-        if let Some(event) = self.event_at(self.start) {
+        if let Some(event) = self.get_event(self.start) {
             return Some(event);
         }
 
         let start = self.repeat.next_event(self.start)?;
 
-        self.event_at_unchecked(start)
+        self.get_event_unchecked(start)
     }
 
     pub fn last_event(&self) -> Option<Event> {
         let start = self.repeat.previous_event(self.end)?;
 
-        self.event_at_unchecked(start)
+        self.get_event_unchecked(start)
     }
 
-    pub fn has_event_at(&self, instant: DateTime) -> bool {
+    pub fn contains_event(&self, instant: DateTime) -> bool {
         instant >= self.start
             && instant < self.end
             && self.repeat.is_event_start(instant, self.start)
     }
 
-    pub fn event_at(&self, instant: DateTime) -> Option<Event> {
-        if !self.has_event_at(instant) {
-            return None;
+    pub fn get_event(&self, instant: DateTime) -> Option<Event> {
+        if self.contains_event(instant) {
+            return self.get_event_unchecked(instant);
         }
 
-        self.event_at_unchecked(instant)
+        None
     }
 
-    fn event_at_unchecked(&self, start: DateTime) -> Option<Event> {
+    fn get_event_unchecked(&self, start: DateTime) -> Option<Event> {
         if self.event_duration.is_positive() {
             let end = start.checked_add(self.event_duration).ok()?;
             return Event::new(start, end).ok();
@@ -154,12 +154,12 @@ where
         Some(Event::at(start))
     }
 
-    pub fn event_containing(&self, instant: DateTime) -> Option<Event> {
-        if let Some(event) = self.event_at(instant) {
+    pub fn get_event_containing(&self, instant: DateTime) -> Option<Event> {
+        if let Some(event) = self.get_event(instant) {
             return Some(event);
         }
 
-        let previous = self.event_before(instant)?;
+        let previous = self.get_event_before(instant)?;
 
         if previous.contains(instant) {
             Some(previous)
@@ -168,32 +168,35 @@ where
         }
     }
 
-    pub fn event_after(&self, instant: DateTime) -> Option<Event> {
+    pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
         let mut start = self.align_to_event_start(instant)?;
 
         if start <= instant {
             start = self.repeat.next_event(start)?;
         }
 
-        self.event_at(start)
+        self.get_event(start)
     }
 
-    pub fn event_before(&self, instant: DateTime) -> Option<Event> {
+    pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
         let mut start = self.align_to_event_start(instant)?;
 
         if start >= instant {
             start = self.repeat.previous_event(start)?;
         }
 
-        self.event_at(start)
+        self.get_event(start)
     }
 
-    pub fn closest_event(&self, instant: DateTime) -> Option<Event> {
-        if let Some(event) = self.event_at(instant) {
+    pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
+        if let Some(event) = self.get_event(instant) {
             return Some(event);
         }
 
-        match (self.event_before(instant), self.event_after(instant)) {
+        match (
+            self.get_event_before(instant),
+            self.get_event_after(instant),
+        ) {
             (Some(before), Some(after)) => {
                 if before.start().duration_until(instant) < after.start().duration_since(instant) {
                     Some(before)
@@ -399,11 +402,11 @@ where
 
         // Handle the case where the series start does not fall into the desired frequency and
         // skip over to the next event right away.
-        if start == series.start && !series.has_event_at(start) {
+        if start == series.start && !series.contains_event(start) {
             return self.next();
         }
 
-        series.event_at_unchecked(start)
+        series.get_event_unchecked(start)
     }
 }
 
@@ -500,15 +503,15 @@ mod tests {
     }
 
     #[test]
-    fn series_has_event_at() {
+    fn series_contains_event() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let series =
             Series::new(start, daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3))).unwrap();
-        assert!(!series.has_event_at(datetime(2025, 1, 1, 1, 1, 1, 0)));
-        assert!(series.has_event_at(datetime(2025, 1, 1, 2, 2, 2, 2)));
-        assert!(series.has_event_at(datetime(2025, 1, 1, 3, 3, 3, 3)));
-        assert!(!series.has_event_at(datetime(2025, 1, 1, 2, 2, 2, 3)));
-        assert!(!series.has_event_at(datetime(2025, 1, 1, 3, 3, 3, 2)));
+        assert!(!series.contains_event(datetime(2025, 1, 1, 1, 1, 1, 0)));
+        assert!(series.contains_event(datetime(2025, 1, 1, 2, 2, 2, 2)));
+        assert!(series.contains_event(datetime(2025, 1, 1, 3, 3, 3, 3)));
+        assert!(!series.contains_event(datetime(2025, 1, 1, 2, 2, 2, 3)));
+        assert!(!series.contains_event(datetime(2025, 1, 1, 3, 3, 3, 2)));
     }
 
     #[test]
@@ -520,27 +523,30 @@ mod tests {
             .end(end)
             .build(daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)))
             .unwrap();
-        assert_eq!(series.event_at(datetime(2025, 1, 1, 1, 1, 1, 0)), None);
+        assert_eq!(series.get_event(datetime(2025, 1, 1, 1, 1, 1, 0)), None);
         assert_eq!(
-            series.event_at(datetime(2025, 1, 1, 2, 2, 2, 2)),
+            series.get_event(datetime(2025, 1, 1, 2, 2, 2, 2)),
             Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)))
         );
 
         assert_eq!(
-            series.event_after(datetime(2025, 1, 1, 2, 2, 2, 2)),
+            series.get_event_after(datetime(2025, 1, 1, 2, 2, 2, 2)),
             Some(Event::at(datetime(2025, 1, 1, 3, 3, 3, 3)))
         );
 
-        assert_eq!(series.event_before(datetime(2025, 1, 1, 2, 2, 2, 2)), None);
+        assert_eq!(
+            series.get_event_before(datetime(2025, 1, 1, 2, 2, 2, 2)),
+            None
+        );
 
         assert_eq!(
-            series.event_before(datetime(2025, 1, 1, 3, 3, 3, 3)),
+            series.get_event_before(datetime(2025, 1, 1, 3, 3, 3, 3)),
             Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2))),
         );
     }
 
     #[test]
-    fn series_event_containing() {
+    fn series_get_event_containing() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 3, 1, 1, 1, 0);
         let series = Series::builder()
@@ -549,15 +555,15 @@ mod tests {
             .build(daily(2).at(time(2, 2, 2, 2)))
             .unwrap();
         assert_eq!(
-            series.event_containing(datetime(2025, 1, 1, 1, 1, 1, 0)),
+            series.get_event_containing(datetime(2025, 1, 1, 1, 1, 1, 0)),
             None
         );
         assert_eq!(
-            series.event_containing(datetime(2025, 1, 1, 2, 2, 2, 2)),
+            series.get_event_containing(datetime(2025, 1, 1, 2, 2, 2, 2)),
             Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)))
         );
         assert_eq!(
-            series.event_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
+            series.get_event_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
             None
         );
 
@@ -569,7 +575,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            series.event_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
+            series.get_event_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
             Some(
                 Event::new(
                     datetime(2025, 1, 1, 2, 2, 2, 2),
@@ -580,7 +586,7 @@ mod tests {
         );
 
         assert_eq!(
-            series.event_containing(datetime(2025, 1, 1, 3, 2, 2, 1)),
+            series.get_event_containing(datetime(2025, 1, 1, 3, 2, 2, 1)),
             Some(
                 Event::new(
                     datetime(2025, 1, 1, 2, 2, 2, 2),
@@ -591,7 +597,7 @@ mod tests {
         );
 
         assert_eq!(
-            series.event_containing(datetime(2025, 1, 1, 3, 2, 2, 2)),
+            series.get_event_containing(datetime(2025, 1, 1, 3, 2, 2, 2)),
             None
         );
     }
@@ -633,32 +639,32 @@ mod tests {
     }
 
     #[test]
-    fn series_closest_event() {
+    fn series_get_closest_event() {
         let start = datetime(2025, 1, 1, 0, 0, 0, 0);
         let series = Series::new(start, hourly(1)).unwrap();
 
         assert_eq!(
-            series.closest_event(datetime(2024, 12, 31, 0, 0, 0, 0)),
+            series.get_closest_event(datetime(2024, 12, 31, 0, 0, 0, 0)),
             Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0)))
         );
         assert_eq!(
-            series.closest_event(datetime(2025, 1, 1, 0, 0, 0, 0)),
+            series.get_closest_event(datetime(2025, 1, 1, 0, 0, 0, 0)),
             Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0)))
         );
         assert_eq!(
-            series.closest_event(datetime(2025, 1, 1, 0, 29, 0, 999)),
+            series.get_closest_event(datetime(2025, 1, 1, 0, 29, 0, 999)),
             Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0)))
         );
         assert_eq!(
-            series.closest_event(datetime(2025, 1, 1, 0, 30, 0, 0)),
+            series.get_closest_event(datetime(2025, 1, 1, 0, 30, 0, 0)),
             Some(Event::at(datetime(2025, 1, 1, 1, 0, 0, 0)))
         );
         assert_eq!(
-            series.closest_event(DateTime::MIN),
+            series.get_closest_event(DateTime::MIN),
             Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0)))
         );
         assert_eq!(
-            series.closest_event(DateTime::MAX),
+            series.get_closest_event(DateTime::MAX),
             Some(Event::at(datetime(9999, 12, 31, 23, 0, 0, 0)))
         );
     }
