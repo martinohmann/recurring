@@ -239,7 +239,7 @@ where
     }
 
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
-        let mut start = self.align_series(instant)?;
+        let mut start = self.repeat.align_to_series(instant, &self.bounds)?;
 
         if start <= instant {
             start = self.repeat.next_event(start)?;
@@ -249,7 +249,7 @@ where
     }
 
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
-        let mut start = self.align_series(instant)?;
+        let mut start = self.repeat.align_to_series(instant, &self.bounds)?;
 
         if start >= instant {
             start = self.repeat.previous_event(start)?;
@@ -277,18 +277,6 @@ where
             (Some(before), None) => Some(before),
             (None, Some(after)) => Some(after),
             (None, None) => None,
-        }
-    }
-
-    fn align_series(&self, instant: DateTime) -> Option<DateTime> {
-        let aligned = self.repeat.align_to_series(instant, &self.bounds)?;
-
-        if aligned < self.bounds.start {
-            self.repeat.align_to_series(self.bounds.start, &self.bounds)
-        } else if aligned >= self.bounds.end {
-            self.repeat.align_to_series(self.bounds.end, &self.bounds)
-        } else {
-            Some(aligned)
         }
     }
 }

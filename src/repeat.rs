@@ -31,12 +31,7 @@ impl Repeat for Secondly {
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        // @FIXME(mohmann): this does not properly align for intervals > 1.
-        instant
-            .with()
-            .subsec_nanosecond(bounds.start.subsec_nanosecond())
-            .build()
-            .ok()
+        align_to_series(instant, bounds, self.interval.seconds())
     }
 }
 
@@ -65,13 +60,7 @@ impl Repeat for Minutely {
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        // @FIXME(mohmann): this does not properly align for intervals > 1.
-        instant
-            .with()
-            .second(bounds.start.second())
-            .subsec_nanosecond(bounds.start.subsec_nanosecond())
-            .build()
-            .ok()
+        align_to_series(instant, bounds, self.interval.minutes())
     }
 }
 
@@ -100,14 +89,7 @@ impl Repeat for Hourly {
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        // @FIXME(mohmann): this does not properly align for intervals > 1.
-        instant
-            .with()
-            .minute(bounds.start.minute())
-            .second(bounds.start.second())
-            .subsec_nanosecond(bounds.start.subsec_nanosecond())
-            .build()
-            .ok()
+        align_to_series(instant, bounds, self.interval.hours())
     }
 }
 
@@ -184,8 +166,7 @@ impl Repeat for Daily {
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
-            // @FIXME(mohmann): this does not properly align for intervals > 1.
-            return instant.with().time(bounds.start.time()).build().ok();
+            return align_to_series(instant, bounds, self.interval.days());
         }
 
         instant.with().time(*self.at.first().unwrap()).build().ok()
@@ -217,13 +198,7 @@ impl Repeat for Monthly {
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        // @FIXME(mohmann): this does not properly align for intervals > 1.
-        instant
-            .with()
-            .day(bounds.start.day())
-            .time(bounds.start.time())
-            .build()
-            .ok()
+        align_to_series(instant, bounds, self.interval.months())
     }
 }
 
@@ -252,14 +227,7 @@ impl Repeat for Yearly {
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        // @FIXME(mohmann): this does not properly align for intervals > 1.
-        instant
-            .with()
-            .month(bounds.start.month())
-            .day(bounds.start.day())
-            .time(bounds.start.time())
-            .build()
-            .ok()
+        align_to_series(instant, bounds, self.interval.years())
     }
 }
 
@@ -288,11 +256,44 @@ pub fn yearly(interval: i32) -> Yearly {
 }
 
 fn is_aligned_to_series(instant: DateTime, bounds: &Range<DateTime>, interval: Span) -> bool {
-    bounds.contains(&instant) && duration_is_multiple_of(bounds.start, instant, interval)
+    intervals_until(bounds.start, instant, interval)
+        .is_some_and(|intervals| intervals.trunc() == intervals)
 }
 
-fn duration_is_multiple_of(start: DateTime, end: DateTime, interval: Span) -> bool {
-    intervals_until(start, end, interval).is_some_and(|intervals| intervals.trunc() == intervals)
+fn align_to_series(
+    instant: DateTime,
+    bounds: &Range<DateTime>,
+    interval: Span,
+) -> Option<DateTime> {
+    let intervals = get_alignment_intervals(instant, bounds, interval)?;
+    bounds.start.checked_add(intervals * interval).ok()
+}
+
+fn get_alignment_intervals(
+    instant: DateTime,
+    bounds: &Range<DateTime>,
+    interval: Span,
+) -> Option<i64> {
+    if instant <= bounds.start {
+        return Some(0);
+    }
+
+    let end = if instant >= bounds.end {
+        bounds.end
+    } else {
+        instant
+    };
+
+    let mut intervals = intervals_until(bounds.start, end, interval)?;
+
+    if end == bounds.end && intervals.round() >= intervals {
+        // The series would hit the end bound exactly or due to rounding up. We need to substract
+        // an interval because the series end bound is exclusive.
+        intervals -= 1.0;
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    Some(intervals.round() as i64)
 }
 
 fn intervals_until(start: DateTime, end: DateTime, interval: Span) -> Option<f64> {
@@ -312,27 +313,71 @@ fn span_seconds(span: Span) -> Option<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jiff::civil::datetime;
+    use jiff::civil::date;
 
     #[test]
     fn test_is_aligned_to_series() {
-        let start = datetime(2025, 1, 1, 0, 0, 0, 0);
+        let start = date(2025, 1, 1).at(0, 0, 0, 0);
         let bounds = start..DateTime::MAX;
 
         assert!(!is_aligned_to_series(
-            datetime(2025, 1, 1, 0, 30, 0, 0),
+            date(2025, 1, 1).at(0, 30, 0, 0),
             &bounds,
             1.hour()
         ));
         assert!(is_aligned_to_series(
-            datetime(2025, 1, 1, 0, 0, 0, 0),
+            date(2025, 1, 1).at(0, 0, 0, 0),
             &bounds,
             1.hour()
         ));
         assert!(is_aligned_to_series(
-            datetime(2025, 1, 1, 1, 0, 0, 0),
+            date(2025, 1, 1).at(1, 0, 0, 0),
             &bounds,
             1.hour()
         ));
+    }
+
+    #[test]
+    fn test_align_to_series() {
+        let start = date(2025, 1, 1).at(0, 0, 0, 0);
+        let end = date(2025, 1, 3).at(0, 0, 0, 0);
+        let bounds = start..end;
+
+        assert_eq!(
+            align_to_series(date(2025, 1, 1).at(0, 0, 0, 0), &bounds, 1.hour()),
+            Some(date(2025, 1, 1).at(0, 0, 0, 0))
+        );
+
+        assert_eq!(
+            align_to_series(date(2025, 1, 1).at(0, 30, 0, 0), &bounds, 1.hour()),
+            Some(date(2025, 1, 1).at(1, 0, 0, 0))
+        );
+
+        assert_eq!(
+            align_to_series(
+                date(2025, 1, 1)
+                    .at(0, 30, 0, 0)
+                    .checked_sub(1.nanosecond())
+                    .unwrap(),
+                &bounds,
+                1.hour()
+            ),
+            Some(date(2025, 1, 1).at(0, 0, 0, 0))
+        );
+
+        assert_eq!(
+            align_to_series(date(2024, 12, 31).at(0, 30, 0, 0), &bounds, 1.hour()),
+            Some(date(2025, 1, 1).at(0, 0, 0, 0))
+        );
+
+        assert_eq!(
+            align_to_series(date(2025, 1, 3).at(0, 0, 0, 0), &bounds, 1.hour()),
+            Some(date(2025, 1, 2).at(23, 0, 0, 0))
+        );
+
+        assert_eq!(
+            align_to_series(date(2025, 2, 10).at(0, 30, 0, 0), &bounds, 1.hour()),
+            Some(date(2025, 1, 2).at(23, 0, 0, 0))
+        );
     }
 }
