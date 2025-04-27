@@ -7,102 +7,42 @@ use jiff::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Secondly {
-    interval: i32,
-}
+pub struct Interval(Span);
 
-impl Secondly {
-    pub fn new(interval: i32) -> Secondly {
-        Secondly { interval }
+impl Interval {
+    pub fn new(span: Span) -> Interval {
+        Interval(span)
     }
 }
 
-impl Repeat for Secondly {
+impl Repeat for Interval {
     fn next_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_add(self.interval.seconds()).ok()
+        instant.checked_add(self.0).ok()
     }
 
     fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_sub(self.interval.seconds()).ok()
+        instant.checked_sub(self.0).ok()
     }
 
     fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        is_aligned_to_series(instant, bounds, self.interval.seconds())
+        is_aligned_to_series(instant, bounds, self.0)
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        align_to_series(instant, bounds, self.interval.seconds())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Minutely {
-    interval: i32,
-}
-
-impl Minutely {
-    pub fn new(interval: i32) -> Minutely {
-        Minutely { interval }
-    }
-}
-
-impl Repeat for Minutely {
-    fn next_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_add(self.interval.minutes()).ok()
-    }
-
-    fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_sub(self.interval.minutes()).ok()
-    }
-
-    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        is_aligned_to_series(instant, bounds, self.interval.minutes())
-    }
-
-    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        align_to_series(instant, bounds, self.interval.minutes())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Hourly {
-    interval: i32,
-}
-
-impl Hourly {
-    pub fn new(interval: i32) -> Hourly {
-        Hourly { interval }
-    }
-}
-
-impl Repeat for Hourly {
-    fn next_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_add(self.interval.hours()).ok()
-    }
-
-    fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_sub(self.interval.hours()).ok()
-    }
-
-    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        is_aligned_to_series(instant, bounds, self.interval.hours())
-    }
-
-    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        align_to_series(instant, bounds, self.interval.hours())
+        align_to_series(instant, bounds, self.0)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Daily {
-    interval: i32,
+    interval: Interval,
     at: Vec<Time>,
 }
 
 impl Daily {
     pub fn new(interval: i32) -> Daily {
         Daily {
-            interval,
+            interval: Interval::new(interval.days()),
             at: Vec::new(),
         }
     }
@@ -118,7 +58,7 @@ impl Daily {
 impl Repeat for Daily {
     fn next_event(&self, instant: DateTime) -> Option<DateTime> {
         if self.at.is_empty() {
-            instant.checked_add(self.interval.days()).ok()
+            self.interval.next_event(instant)
         } else {
             for time in &self.at {
                 let date = instant.with().time(*time).build().ok()?;
@@ -128,7 +68,7 @@ impl Repeat for Daily {
                 }
             }
 
-            let next_date = instant.checked_add(self.interval.days()).ok()?;
+            let next_date = instant.checked_add(self.interval.0).ok()?;
 
             next_date.with().time(self.at[0]).build().ok()
         }
@@ -136,7 +76,7 @@ impl Repeat for Daily {
 
     fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
         if self.at.is_empty() {
-            instant.checked_sub(self.interval.days()).ok()
+            self.interval.previous_event(instant)
         } else {
             for time in self.at.iter().rev() {
                 let date = instant.with().time(*time).build().ok()?;
@@ -146,7 +86,7 @@ impl Repeat for Daily {
                 }
             }
 
-            let next_date = instant.checked_sub(self.interval.days()).ok()?;
+            let next_date = instant.checked_sub(self.interval.0).ok()?;
 
             next_date.with().time(*self.at.last().unwrap()).build().ok()
         }
@@ -154,108 +94,65 @@ impl Repeat for Daily {
 
     fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
         if self.at.is_empty() {
-            return is_aligned_to_series(instant, bounds, self.interval.days());
+            self.interval.is_aligned_to_series(instant, bounds)
+        } else {
+            instant
+                .checked_sub(1.minute())
+                .ok()
+                .and_then(|start| self.next_event(start))
+                == Some(instant)
         }
-
-        instant
-            .checked_sub(1.minute())
-            .ok()
-            .and_then(|start| self.next_event(start))
-            == Some(instant)
     }
 
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
-            return align_to_series(instant, bounds, self.interval.days());
+            self.interval.align_to_series(instant, bounds)
+        } else {
+            let aligned = self.interval.align_to_series(instant, bounds)?;
+
+            for time in &self.at {
+                let date = aligned.with().time(*time).build().ok()?;
+
+                if bounds.contains(&date) {
+                    return Some(date);
+                }
+            }
+
+            None
         }
-
-        instant.with().time(*self.at.first().unwrap()).build().ok()
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Monthly {
-    interval: i32,
+pub fn interval(span: Span) -> Interval {
+    Interval::new(span)
 }
 
-impl Monthly {
-    pub fn new(interval: i32) -> Monthly {
-        Monthly { interval }
-    }
+pub fn secondly(interval: i32) -> Interval {
+    Interval::new(interval.seconds())
 }
 
-impl Repeat for Monthly {
-    fn next_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_add(self.interval.months()).ok()
-    }
-
-    fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_sub(self.interval.months()).ok()
-    }
-
-    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        is_aligned_to_series(instant, bounds, self.interval.months())
-    }
-
-    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        align_to_series(instant, bounds, self.interval.months())
-    }
+pub fn minutely(interval: i32) -> Interval {
+    Interval::new(interval.minutes())
 }
 
-#[derive(Debug, Clone)]
-pub struct Yearly {
-    interval: i32,
-}
-
-impl Yearly {
-    pub fn new(interval: i32) -> Yearly {
-        Yearly { interval }
-    }
-}
-
-impl Repeat for Yearly {
-    fn next_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_add(self.interval.years()).ok()
-    }
-
-    fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
-        instant.checked_sub(self.interval.years()).ok()
-    }
-
-    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool {
-        is_aligned_to_series(instant, bounds, self.interval.years())
-    }
-
-    fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        align_to_series(instant, bounds, self.interval.years())
-    }
-}
-
-pub fn secondly(interval: i32) -> Secondly {
-    Secondly::new(interval)
-}
-
-pub fn minutely(interval: i32) -> Minutely {
-    Minutely::new(interval)
-}
-
-pub fn hourly(interval: i32) -> Hourly {
-    Hourly::new(interval)
+pub fn hourly(interval: i32) -> Interval {
+    Interval::new(interval.hours())
 }
 
 pub fn daily(interval: i32) -> Daily {
     Daily::new(interval)
 }
 
-pub fn monthly(interval: i32) -> Monthly {
-    Monthly::new(interval)
+pub fn monthly(interval: i32) -> Interval {
+    Interval::new(interval.months())
 }
 
-pub fn yearly(interval: i32) -> Yearly {
-    Yearly::new(interval)
+pub fn yearly(interval: i32) -> Interval {
+    Interval::new(interval.years())
 }
 
 fn is_aligned_to_series(instant: DateTime, bounds: &Range<DateTime>, interval: Span) -> bool {
+    #[allow(clippy::float_cmp)]
     intervals_until(bounds.start, instant, interval)
         .is_some_and(|intervals| intervals.trunc() == intervals)
 }

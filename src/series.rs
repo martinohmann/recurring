@@ -677,13 +677,13 @@ mod tests {
             .unwrap();
         assert_eq!(
             series.last_event(),
-            Some(Event::at(datetime(2025, 1, 8, 2, 2, 2, 2)))
+            Some(Event::at(datetime(2025, 1, 9, 2, 2, 2, 2)))
         );
 
         let series = Series::new(start, daily(2).at(time(2, 2, 2, 2))).unwrap();
         assert_eq!(
             series.last_event(),
-            Some(Event::at(datetime(9999, 12, 31, 2, 2, 2, 2)))
+            Some(Event::at(datetime(9999, 12, 30, 2, 2, 2, 2)))
         );
     }
 
