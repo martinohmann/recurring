@@ -125,9 +125,7 @@ where
     }
 
     pub fn contains_event(&self, instant: DateTime) -> bool {
-        instant >= self.start
-            && instant < self.end
-            && self.repeat.is_event_start(instant, self.start)
+        self.is_within_bounds(instant) && self.repeat.is_event_start(instant, self.start)
     }
 
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
@@ -213,6 +211,10 @@ where
         } else {
             Some(aligned)
         }
+    }
+
+    fn is_within_bounds(&self, instant: DateTime) -> bool {
+        instant >= self.start && instant < self.end
     }
 }
 
