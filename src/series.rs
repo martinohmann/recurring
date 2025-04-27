@@ -1,4 +1,5 @@
 use crate::{Error, Event, Repeat};
+use core::ops::Range;
 use jiff::{Span, Zoned, civil::DateTime};
 
 /// A series of recurring events.
@@ -20,7 +21,6 @@ use jiff::{Span, Zoned, civil::DateTime};
 ///
 /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
 /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
-/// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(4, 0, 0, 0))));
 /// assert_eq!(events.next(), None);
 /// # Ok(())
 /// # }
@@ -28,8 +28,7 @@ use jiff::{Span, Zoned, civil::DateTime};
 #[derive(Debug, Clone)]
 pub struct Series<R> {
     repeat: R,
-    start: DateTime,
-    end: DateTime,
+    bounds: Range<DateTime>,
     event_duration: Span,
 }
 
@@ -134,8 +133,8 @@ where
     /// # }
     /// ```
     pub fn first_event(&self) -> Option<Event> {
-        self.get_event(self.start)
-            .or_else(|| self.get_event_after(self.start))
+        self.get_event(self.bounds.start)
+            .or_else(|| self.get_event_after(self.bounds.start))
     }
 
     /// Gets the last event in the series.
@@ -161,7 +160,7 @@ where
     /// # }
     /// ```
     pub fn last_event(&self) -> Option<Event> {
-        self.get_event_before(self.end)
+        self.get_event_before(self.bounds.end)
     }
 
     /// Returns `true` when the series contains an event starting at `instant`.
@@ -184,7 +183,7 @@ where
     /// # }
     /// ```
     pub fn contains_event(&self, instant: DateTime) -> bool {
-        self.is_within_bounds(instant) && self.repeat.is_event_start(instant, self.start)
+        self.bounds.contains(&instant) && self.repeat.is_event_start(instant, self.bounds.start)
     }
 
     /// Gets an event in the series.
@@ -282,19 +281,19 @@ where
     }
 
     fn align_to_event_start(&self, instant: DateTime) -> Option<DateTime> {
-        let aligned = self.repeat.align_to_event_start(instant, self.start)?;
+        let aligned = self
+            .repeat
+            .align_to_event_start(instant, self.bounds.start)?;
 
-        if aligned < self.start {
-            self.repeat.align_to_event_start(self.start, self.start)
-        } else if aligned > self.end {
-            self.repeat.align_to_event_start(self.end, self.start)
+        if aligned < self.bounds.start {
+            self.repeat
+                .align_to_event_start(self.bounds.start, self.bounds.start)
+        } else if aligned >= self.bounds.end {
+            self.repeat
+                .align_to_event_start(self.bounds.end, self.bounds.start)
         } else {
             Some(aligned)
         }
-    }
-
-    fn is_within_bounds(&self, instant: DateTime) -> bool {
-        instant >= self.start && instant < self.end
     }
 }
 
@@ -431,8 +430,7 @@ impl SeriesBuilder {
 
         Ok(Series {
             repeat,
-            start,
-            end,
+            bounds: (start..end),
             event_duration,
         })
     }
@@ -452,7 +450,7 @@ impl<'a, R> Iter<'a, R> {
     fn new(series: &'a Series<R>) -> Iter<'a, R> {
         Iter {
             series,
-            next_start: Some(series.start),
+            next_start: Some(series.bounds.start),
         }
     }
 }
@@ -467,7 +465,7 @@ where
         let series = &self.series;
         let start = self.next_start?;
 
-        if start > series.end {
+        if !series.bounds.contains(&start) {
             return None;
         }
 
@@ -475,7 +473,7 @@ where
 
         // Handle the case where the series start does not fall into the desired frequency and
         // skip over to the next event right away.
-        if start == series.start && !series.contains_event(start) {
+        if start == series.bounds.start && !series.contains_event(start) {
             return self.next();
         }
 
@@ -538,7 +536,6 @@ mod tests {
         let expected = vec![
             Event::at(datetime(2025, 1, 1, 1, 1, 1, 0)),
             Event::at(datetime(2025, 1, 3, 1, 1, 1, 0)),
-            Event::at(datetime(2025, 1, 5, 1, 1, 1, 0)),
         ];
         assert_eq!(events, expected);
     }
@@ -564,11 +561,6 @@ mod tests {
             Event::new(
                 datetime(2025, 1, 3, 1, 1, 1, 0),
                 datetime(2025, 1, 3, 2, 1, 1, 0),
-            )
-            .unwrap(),
-            Event::new(
-                datetime(2025, 1, 5, 1, 1, 1, 0),
-                datetime(2025, 1, 5, 2, 1, 1, 0),
             )
             .unwrap(),
         ];
