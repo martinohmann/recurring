@@ -116,19 +116,12 @@ where
     }
 
     pub fn first_event(&self) -> Option<Event> {
-        if let Some(event) = self.get_event(self.start) {
-            return Some(event);
-        }
-
-        let start = self.repeat.next_event(self.start)?;
-
-        self.get_event_unchecked(start)
+        self.get_event(self.start)
+            .or_else(|| self.get_event_after(self.start))
     }
 
     pub fn last_event(&self) -> Option<Event> {
-        let start = self.repeat.previous_event(self.end)?;
-
-        self.get_event_unchecked(start)
+        self.get_event_before(self.end)
     }
 
     pub fn contains_event(&self, instant: DateTime) -> bool {
@@ -139,19 +132,19 @@ where
 
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
         if self.contains_event(instant) {
-            return self.get_event_unchecked(instant);
+            self.get_event_unchecked(instant)
+        } else {
+            None
         }
-
-        None
     }
 
     fn get_event_unchecked(&self, start: DateTime) -> Option<Event> {
         if self.event_duration.is_positive() {
             let end = start.checked_add(self.event_duration).ok()?;
-            return Event::new(start, end).ok();
+            Event::new(start, end).ok()
+        } else {
+            Some(Event::at(start))
         }
-
-        Some(Event::at(start))
     }
 
     pub fn get_event_containing(&self, instant: DateTime) -> Option<Event> {
@@ -214,14 +207,12 @@ where
         let aligned = self.repeat.align_to_event_start(instant, self.start)?;
 
         if aligned < self.start {
-            return self.repeat.align_to_event_start(self.start, self.start);
+            self.repeat.align_to_event_start(self.start, self.start)
+        } else if aligned > self.end {
+            self.repeat.align_to_event_start(self.end, self.start)
+        } else {
+            Some(aligned)
         }
-
-        if aligned > self.end {
-            return self.repeat.align_to_event_start(self.end, self.start);
-        }
-
-        Some(aligned)
     }
 }
 
