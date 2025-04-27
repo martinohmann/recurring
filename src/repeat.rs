@@ -27,6 +27,7 @@ impl Repeat for Secondly {
 
     fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
         instant.subsec_nanosecond() == series_start.subsec_nanosecond()
+            && (instant.duration_since(series_start).as_secs() % self.interval as i64 == 0)
     }
 
     fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
@@ -61,6 +62,7 @@ impl Repeat for Minutely {
     fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
         instant.second() == series_start.second()
             && instant.subsec_nanosecond() == series_start.subsec_nanosecond()
+            && (instant.duration_since(series_start).as_mins() % self.interval as i64 == 0)
     }
 
     fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
@@ -97,6 +99,7 @@ impl Repeat for Hourly {
         instant.minute() == series_start.minute()
             && instant.second() == series_start.second()
             && instant.subsec_nanosecond() == series_start.subsec_nanosecond()
+            && (instant.duration_since(series_start).as_hours() % self.interval as i64 == 0)
     }
 
     fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {

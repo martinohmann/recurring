@@ -115,19 +115,99 @@ where
         Iter::new(self)
     }
 
+    /// Gets the first event in the series.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::civil::date;
+    /// use recurring::{Event, Series};
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series = Series::builder()
+    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
+    ///     .build(hourly(2))?;
+    ///
+    /// assert_eq!(series.first_event(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn first_event(&self) -> Option<Event> {
         self.get_event(self.start)
             .or_else(|| self.get_event_after(self.start))
     }
 
+    /// Gets the last event in the series.
+    ///
+    /// If the series does not have an end, this method will return an event close to
+    /// `DateTime::MAX`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::civil::date;
+    /// use recurring::{Event, Series};
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series = Series::builder()
+    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
+    ///     .end(date(2026, 1, 1).at(0, 0, 0, 0))
+    ///     .build(hourly(2))?;
+    ///
+    /// assert_eq!(series.last_event(), Some(Event::at(date(2025, 12, 31).at(22, 0, 0, 0))));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn last_event(&self) -> Option<Event> {
         self.get_event_before(self.end)
     }
 
+    /// Returns `true` when the series contains an event starting at `instant`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::civil::date;
+    /// # use recurring::Series;
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series = Series::builder()
+    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
+    ///     .build(hourly(2))?;
+    ///
+    /// assert!(!series.contains_event(date(2025, 1, 1).at(0, 35, 0, 0)));
+    /// assert!(series.contains_event(date(2025, 2, 10).at(12, 0, 0, 0)));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn contains_event(&self, instant: DateTime) -> bool {
         self.is_within_bounds(instant) && self.repeat.is_event_start(instant, self.start)
     }
 
+    /// Gets an event in the series.
+    ///
+    /// Returns `Some(_)` if there's an event starting at `instant`, otherwise `None`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::civil::date;
+    /// use recurring::{Event, Series};
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series = Series::builder()
+    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
+    ///     .build(hourly(2))?;
+    ///
+    /// assert!(series.get_event(date(2025, 1, 1).at(1, 0, 0, 0)).is_none());
+    /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
         if self.contains_event(instant) {
             self.get_event_unchecked(instant)
