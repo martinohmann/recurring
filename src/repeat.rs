@@ -1,7 +1,7 @@
 use crate::Repeat;
 use alloc::vec::Vec;
 use jiff::{
-    ToSpan,
+    Span, SpanTotal, ToSpan, Unit,
     civil::{DateTime, Time},
 };
 
@@ -26,11 +26,11 @@ impl Repeat for Secondly {
     }
 
     fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        instant.subsec_nanosecond() == series_start.subsec_nanosecond()
-            && (instant.duration_since(series_start).as_secs() % self.interval as i64 == 0)
+        duration_is_multiple_of(series_start, instant, self.interval, Unit::Second)
     }
 
     fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
             .subsec_nanosecond(series_start.subsec_nanosecond())
@@ -60,12 +60,11 @@ impl Repeat for Minutely {
     }
 
     fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        instant.second() == series_start.second()
-            && instant.subsec_nanosecond() == series_start.subsec_nanosecond()
-            && (instant.duration_since(series_start).as_mins() % self.interval as i64 == 0)
+        duration_is_multiple_of(series_start, instant, self.interval, Unit::Minute)
     }
 
     fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
             .second(series_start.second())
@@ -96,13 +95,11 @@ impl Repeat for Hourly {
     }
 
     fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        instant.minute() == series_start.minute()
-            && instant.second() == series_start.second()
-            && instant.subsec_nanosecond() == series_start.subsec_nanosecond()
-            && (instant.duration_since(series_start).as_hours() % self.interval as i64 == 0)
+        duration_is_multiple_of(series_start, instant, self.interval, Unit::Hour)
     }
 
     fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
             .minute(series_start.minute())
@@ -174,7 +171,7 @@ impl Repeat for Daily {
 
     fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
         if self.at.is_empty() {
-            return instant.time() == series_start.time();
+            return duration_is_multiple_of(series_start, instant, self.interval, Unit::Day);
         }
 
         instant
@@ -186,6 +183,7 @@ impl Repeat for Daily {
 
     fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
         if self.at.is_empty() {
+            // @FIXME(mohmann): this does not properly align for intervals > 1.
             return instant.with().time(series_start.time()).build().ok();
         }
 
@@ -214,10 +212,11 @@ impl Repeat for Monthly {
     }
 
     fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        instant.time() == series_start.time() && instant.day() == series_start.day()
+        duration_is_multiple_of(series_start, instant, self.interval, Unit::Month)
     }
 
     fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
             .day(series_start.day())
@@ -248,12 +247,11 @@ impl Repeat for Yearly {
     }
 
     fn is_event_start(&self, instant: DateTime, series_start: DateTime) -> bool {
-        instant.time() == series_start.time()
-            && instant.day() == series_start.day()
-            && instant.month() == series_start.month()
+        duration_is_multiple_of(series_start, instant, self.interval, Unit::Year)
     }
 
     fn align_to_event_start(&self, instant: DateTime, series_start: DateTime) -> Option<DateTime> {
+        // @FIXME(mohmann): this does not properly align for intervals > 1.
         instant
             .with()
             .month(series_start.month())
@@ -286,4 +284,15 @@ pub fn monthly(interval: i32) -> Monthly {
 
 pub fn yearly(interval: i32) -> Yearly {
     Yearly::new(interval)
+}
+
+fn duration_is_multiple_of<I: Into<f64>>(
+    start: DateTime,
+    end: DateTime,
+    interval: I,
+    unit: Unit,
+) -> bool {
+    Span::try_from(start.duration_until(end).abs())
+        .and_then(|span| span.total(SpanTotal::from(unit).days_are_24_hours()))
+        .is_ok_and(|total| total % interval.into() == 0.0)
 }
