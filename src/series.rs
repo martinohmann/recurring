@@ -266,13 +266,27 @@ where
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        if self.contains_event(instant) {
-            self.get_event_unchecked(instant)
+        if self.repeat.is_aligned_to_series(instant, &self.bounds) {
+            self.get_event_aligned(instant)
         } else {
             None
         }
     }
 
+    /// Get an event without any alignment checks. The datetime at `start` is assumed to be aligned to
+    /// the series but not necessarily within the series start and end bounds.
+    #[inline]
+    fn get_event_aligned(&self, start: DateTime) -> Option<Event> {
+        if self.bounds.contains(&start) {
+            self.get_event_unchecked(start)
+        } else {
+            None
+        }
+    }
+
+    /// Get an event without any bound checks. The datetime at `start` is assumed to be aligned to
+    /// the series and within the series start and end bounds.
+    #[inline]
     fn get_event_unchecked(&self, start: DateTime) -> Option<Event> {
         if self.event_duration.is_positive() {
             let end = start.checked_add(self.event_duration).ok()?;
@@ -303,7 +317,7 @@ where
             start = self.repeat.next_event(start)?;
         }
 
-        self.get_event(start)
+        self.get_event_aligned(start)
     }
 
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
@@ -313,7 +327,7 @@ where
             start = self.repeat.previous_event(start)?;
         }
 
-        self.get_event(start)
+        self.get_event_aligned(start)
     }
 
     pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
