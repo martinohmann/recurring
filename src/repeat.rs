@@ -119,7 +119,7 @@ impl Daily {
     ///
     /// let every_two_days = Daily::new(2);
     /// ```
-    pub fn new(interval: i32) -> Daily {
+    pub fn new<I: ToSpan>(interval: I) -> Daily {
         Daily {
             interval: Interval::new(interval.days()),
             at: Vec::new(),
@@ -143,7 +143,7 @@ impl Daily {
     /// assert!(Daily::try_new(0).is_err());
     /// assert!(Daily::try_new(-1).is_err());
     /// ```
-    pub fn try_new(interval: i32) -> Result<Daily, Error> {
+    pub fn try_new<I: ToSpan>(interval: I) -> Result<Daily, Error> {
         Ok(Daily {
             interval: Interval::try_new(interval.days())?,
             at: Vec::new(),
@@ -163,7 +163,7 @@ impl Daily {
     /// let every_day_at_midnight_and_twelve = every_day_at_twelve.at(time(0, 0, 0, 0));
     /// ```
     #[must_use]
-    pub fn at(self, time: Time) -> Daily {
+    pub fn at<T: Into<Time>>(self, time: T) -> Daily {
         self.at_times([time])
     }
 
@@ -179,8 +179,8 @@ impl Daily {
     ///     .at_times([time(0, 0, 0, 0), time(12, 0, 0, 0)]);
     /// ```
     #[must_use]
-    pub fn at_times(mut self, times: impl IntoIterator<Item = Time>) -> Daily {
-        self.at.extend(times);
+    pub fn at_times<T: IntoIterator<Item = impl Into<Time>>>(mut self, times: T) -> Daily {
+        self.at.extend(times.into_iter().map(Into::into));
         self.at.sort();
         self.at.dedup();
         self
@@ -288,7 +288,7 @@ pub fn interval(span: Span) -> Interval {
 /// let every_ten_seconds = secondly(10);
 /// ```
 #[inline]
-pub fn secondly(interval: i32) -> Interval {
+pub fn secondly<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.seconds())
 }
 
@@ -306,7 +306,7 @@ pub fn secondly(interval: i32) -> Interval {
 /// let every_thirty_minutes = minutely(30);
 /// ```
 #[inline]
-pub fn minutely(interval: i32) -> Interval {
+pub fn minutely<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.minutes())
 }
 
@@ -324,7 +324,7 @@ pub fn minutely(interval: i32) -> Interval {
 /// let every_twelve_hours = hourly(12);
 /// ```
 #[inline]
-pub fn hourly(interval: i32) -> Interval {
+pub fn hourly<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.hours())
 }
 
@@ -342,7 +342,7 @@ pub fn hourly(interval: i32) -> Interval {
 /// let every_two_days = daily(2);
 /// ```
 #[inline]
-pub fn daily(interval: i32) -> Daily {
+pub fn daily<I: ToSpan>(interval: I) -> Daily {
     Daily::new(interval)
 }
 
@@ -360,7 +360,7 @@ pub fn daily(interval: i32) -> Daily {
 /// let every_three_months = monthly(3);
 /// ```
 #[inline]
-pub fn monthly(interval: i32) -> Interval {
+pub fn monthly<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.months())
 }
 
@@ -378,7 +378,7 @@ pub fn monthly(interval: i32) -> Interval {
 /// let every_five_years = yearly(5);
 /// ```
 #[inline]
-pub fn yearly(interval: i32) -> Interval {
+pub fn yearly<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.years())
 }
 
