@@ -200,9 +200,8 @@ impl Repeat for Daily {
                 }
             }
 
-            let next_date = instant.checked_add(self.interval.0).ok()?;
-
-            next_date.with().time(self.at[0]).build().ok()
+            let next = self.interval.next_event(instant)?;
+            next.with().time(self.at[0]).build().ok()
         }
     }
 
@@ -218,9 +217,8 @@ impl Repeat for Daily {
                 }
             }
 
-            let next_date = instant.checked_sub(self.interval.0).ok()?;
-
-            next_date.with().time(*self.at.last().unwrap()).build().ok()
+            let previous = self.interval.previous_event(instant)?;
+            previous.with().time(*self.at.last().unwrap()).build().ok()
         }
     }
 
@@ -232,7 +230,7 @@ impl Repeat for Daily {
                 .checked_sub(1.minute())
                 .ok()
                 .and_then(|start| self.next_event(start))
-                == Some(instant)
+                .is_some_and(|date| date == instant)
         }
     }
 
@@ -242,15 +240,11 @@ impl Repeat for Daily {
         } else {
             let aligned = self.interval.align_to_series(instant, bounds)?;
 
-            for time in &self.at {
-                let date = aligned.with().time(*time).build().ok()?;
-
-                if bounds.contains(&date) {
-                    return Some(date);
-                }
-            }
-
-            None
+            self.at
+                .iter()
+                .filter_map(|time| aligned.with().time(*time).build().ok())
+                .filter(|date| bounds.contains(date))
+                .min_by_key(|date| date.duration_since(instant).abs())
         }
     }
 }
