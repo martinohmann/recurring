@@ -473,7 +473,7 @@ mod tests {
     use alloc::vec::Vec;
     use jiff::{
         ToSpan,
-        civil::{datetime, time},
+        civil::{date, datetime, time},
     };
 
     #[test]
@@ -684,6 +684,16 @@ mod tests {
         assert_eq!(
             series.last_event(),
             Some(Event::at(datetime(9999, 12, 30, 2, 2, 2, 2)))
+        );
+    }
+
+    #[test]
+    fn series_last_event_unbounded() {
+        let start = date(2025, 1, 1).at(1, 1, 1, 0);
+        let series = Series::new(start, hourly(2)).unwrap();
+        assert_eq!(
+            series.last_event(),
+            Some(Event::at(date(9999, 12, 31).at(23, 1, 1, 0)))
         );
     }
 

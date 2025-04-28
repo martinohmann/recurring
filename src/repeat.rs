@@ -152,9 +152,10 @@ pub fn yearly(interval: i32) -> Interval {
 }
 
 fn is_aligned_to_series(instant: DateTime, bounds: &Range<DateTime>, interval: Span) -> bool {
-    #[allow(clippy::float_cmp)]
+    const ALLOWED_INTERVAL_ERROR: f64 = 0.000_001;
+
     intervals_until(bounds.start, instant, interval)
-        .is_some_and(|intervals| intervals.trunc() == intervals)
+        .is_some_and(|intervals| intervals.fract() < ALLOWED_INTERVAL_ERROR)
 }
 
 fn align_to_series(
@@ -175,11 +176,7 @@ fn get_alignment_intervals(
         return Some(0);
     }
 
-    let end = if instant >= bounds.end {
-        bounds.end
-    } else {
-        instant
-    };
+    let end = instant.min(bounds.end);
 
     let mut intervals = intervals_until(bounds.start, end, interval)?;
 
@@ -232,6 +229,14 @@ mod tests {
             &bounds,
             1.hour()
         ));
+
+        let bounds = start..DateTime::MAX;
+
+        assert!(is_aligned_to_series(
+            date(9999, 12, 31).at(22, 0, 0, 0),
+            &bounds,
+            2.hour()
+        ),);
     }
 
     #[test]
@@ -275,6 +280,13 @@ mod tests {
         assert_eq!(
             align_to_series(date(2025, 2, 10).at(0, 30, 0, 0), &bounds, 1.hour()),
             Some(date(2025, 1, 2).at(23, 0, 0, 0))
+        );
+
+        let bounds = start..DateTime::MAX;
+
+        assert_eq!(
+            align_to_series(DateTime::MAX, &bounds, 2.hour()),
+            Some(date(9999, 12, 31).at(22, 0, 0, 0))
         );
     }
 }
