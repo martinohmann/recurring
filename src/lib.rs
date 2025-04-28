@@ -14,7 +14,7 @@ use core::ops::Range;
 
 pub use self::error::Error;
 pub use self::event::Event;
-pub use self::series::{Iter, Series, SeriesBuilder};
+pub use self::series::{Iter, Series, SeriesWith};
 use jiff::civil::DateTime;
 
 pub trait Repeat {

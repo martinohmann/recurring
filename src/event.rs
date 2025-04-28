@@ -55,7 +55,7 @@ impl Event {
     ///
     /// # Errors
     ///
-    /// Returns `Error::InvalidEventEnd` if `start >= end`.
+    /// Returns and `Error` if `start >= end`.
     ///
     /// # Example
     ///
@@ -72,7 +72,7 @@ impl Event {
     /// ```
     pub fn new(start: DateTime, end: DateTime) -> Result<Event, Error> {
         if start >= end {
-            return Err(Error::InvalidEventEnd);
+            return Err(Error::InvalidBounds);
         }
 
         Ok(Event {
@@ -215,13 +215,13 @@ impl Event {
     where
         R: Repeat,
     {
-        let mut builder = Series::builder().start(self.start);
+        let series = Series::try_new(self.start, repeat)?;
 
         if let Some(duration) = self.duration() {
-            builder = builder.event_duration(duration);
+            series.with().event_duration(duration).build()
+        } else {
+            Ok(series)
         }
-
-        builder.build(repeat)
     }
 }
 
