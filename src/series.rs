@@ -1,6 +1,6 @@
 use crate::{Error, Event, Repeat};
 use core::ops::Range;
-use jiff::{Span, Zoned, civil::DateTime};
+use jiff::{Span, civil::DateTime};
 
 /// A series of recurring events.
 ///
@@ -12,10 +12,13 @@ use jiff::{Span, Zoned, civil::DateTime};
 /// use recurring::{Event, Series};
 /// use recurring::repeat::hourly;
 ///
-/// let series = Series::builder()
-///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
-///     .end(date(2025, 1, 1).at(4, 0, 0, 0))
-///     .build(hourly(2))?;
+/// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+/// let end = date(2025, 1, 1).at(4, 0, 0, 0);
+///
+/// let series = Series::new(start, hourly(2))
+///     .with()
+///     .end(end)
+///     .build()?;
 ///
 /// let mut events = series.iter();
 ///
@@ -32,42 +35,53 @@ pub struct Series<R> {
     event_duration: Span,
 }
 
-impl Series<()> {
-    /// Creates a new `SeriesBuilder` with default options.
-    ///
-    /// See the type documentation of [`SeriesBuilder`] for more details.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// # use recurring::Series;
-    /// use jiff::civil::date;
-    /// use recurring::repeat::daily;
-    ///
-    /// let series = Series::builder()
-    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
-    ///     .end(date(2026, 1, 1).at(0, 0, 0, 0))
-    ///     .build(daily(1))?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn builder() -> SeriesBuilder {
-        SeriesBuilder::default()
-    }
-}
-
 impl<R> Series<R>
 where
     R: Repeat,
 {
-    /// Convenience method to create a new `Series` starting at `start` that produces events in the
-    /// given `repeat` interval.
+    /// Creates a new `Series` starting at `start` that produces events in the given `repeat`
+    /// interval.
     ///
-    /// This is equivalent to calling `Series::builder().start(start).build(repeat)`.
+    /// To configure more aspects of the series call `.with()` on the constructed
+    /// `Series` value. See the documentation of [`Series::with`] for more details.
     ///
-    /// For more series configuration options consider using the builder provided by
-    /// [`Series::builder`]. See the documentation of [`SeriesBuilder`] for more details.
+    /// For a fallible alternative see [`Series::try_new`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `start` is `DateTime::MAX`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jiff::civil::date;
+    /// # use recurring::Series;
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
+    /// ```
+    pub fn new(start: DateTime, repeat: R) -> Series<R> {
+        let end = DateTime::MAX;
+
+        assert!(
+            start < end,
+            "invalid bounds: end must be greater than start"
+        );
+
+        Series {
+            repeat,
+            bounds: start..end,
+            event_duration: Span::new(),
+        }
+    }
+
+    /// Creates a new `Series` starting at `start` that produces events in the given `repeat`
+    /// interval.
+    ///
+    /// To configure more aspects of the series call `.with()` on the constructed
+    /// `Series` value. See the documentation of [`Series::with`] for more details.
+    ///
+    /// For an infallible alternative that panics instead see [`Series::new`].
     ///
     /// # Errors
     ///
@@ -77,16 +91,80 @@ where
     ///
     /// ```
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use jiff::civil::date;
+    /// use jiff::civil::{DateTime, date};
     /// # use recurring::Series;
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2))?;
+    /// assert!(Series::try_new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2)).is_ok());
+    /// assert!(Series::try_new(DateTime::MAX, hourly(2)).is_err());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new(start: DateTime, repeat: R) -> Result<Series<R>, Error> {
-        Series::builder().start(start).build(repeat)
+    pub fn try_new(start: DateTime, repeat: R) -> Result<Series<R>, Error> {
+        let end = DateTime::MAX;
+
+        if start >= end {
+            return Err(Error::InvalidBounds);
+        }
+
+        Ok(Series {
+            repeat,
+            bounds: start..end,
+            event_duration: Span::new(),
+        })
+    }
+
+    /// Creates a builder for constructing a new `Series` from the fields of this series.
+    ///
+    /// # Example
+    ///
+    /// Set an explict end date for the series and configure the duration of the individual events.
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// # use recurring::Series;
+    /// use jiff::ToSpan;
+    /// use jiff::civil::date;
+    /// use recurring::repeat::daily;
+    ///
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    ///
+    /// let s2 = s1.with()
+    ///     .end(date(2025, 2, 1).at(0, 0, 0, 0))
+    ///     .event_duration(1.hour())
+    ///     .build()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with(self) -> SeriesWith<R> {
+        SeriesWith::new(self)
+    }
+
+    /// Returns the `DateTime` at which the series starts.
+    ///
+    /// This is not necessarily the time of the first event in the series.
+    pub fn start(&self) -> DateTime {
+        self.bounds.start
+    }
+
+    /// Returns the `DateTime` at which the series end.
+    ///
+    /// Don't confuse this with the time of the last event in the series. It is merely an exclusive
+    /// upper bound until which the series will yield events.
+    pub fn end(&self) -> DateTime {
+        self.bounds.end
+    }
+
+    /// Returns the duration of individual events in the series.
+    ///
+    /// If this is zero, events will not have an end date.
+    pub fn event_duration(&self) -> Span {
+        self.event_duration
+    }
+
+    /// Returns a reference to the `Repeat` used by the series to generate events.
+    pub fn repeat(&self) -> &R {
+        &self.repeat
     }
 
     /// Creates an iterator over the events in a the series.
@@ -94,21 +172,16 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
     /// use recurring::{Event, Series};
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::builder()
-    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
-    ///     .build(hourly(2))?;
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
     ///
     /// let mut events = series.iter();
     ///
     /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
     /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
-    /// # Ok(())
-    /// # }
     /// ```
     pub fn iter(&self) -> Iter<'_, R> {
         Iter::new(self)
@@ -119,18 +192,13 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
     /// use recurring::{Event, Series};
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::builder()
-    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
-    ///     .build(hourly(2))?;
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
     ///
     /// assert_eq!(series.first_event(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
-    /// # Ok(())
-    /// # }
     /// ```
     pub fn first_event(&self) -> Option<Event> {
         self.get_event(self.bounds.start)
@@ -150,10 +218,10 @@ where
     /// use recurring::{Event, Series};
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::builder()
-    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2))
+    ///     .with()
     ///     .end(date(2026, 1, 1).at(0, 0, 0, 0))
-    ///     .build(hourly(2))?;
+    ///     .build()?;
     ///
     /// assert_eq!(series.last_event(), Some(Event::at(date(2025, 12, 31).at(22, 0, 0, 0))));
     /// # Ok(())
@@ -168,19 +236,14 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
     /// # use recurring::Series;
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::builder()
-    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
-    ///     .build(hourly(2))?;
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
     ///
     /// assert!(!series.contains_event(date(2025, 1, 1).at(0, 35, 0, 0)));
     /// assert!(series.contains_event(date(2025, 2, 10).at(12, 0, 0, 0)));
-    /// # Ok(())
-    /// # }
     /// ```
     pub fn contains_event(&self, instant: DateTime) -> bool {
         self.bounds.contains(&instant) && self.repeat.is_aligned_to_series(instant, &self.bounds)
@@ -193,19 +256,14 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
     /// use recurring::{Event, Series};
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::builder()
-    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
-    ///     .build(hourly(2))?;
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
     ///
     /// assert!(series.get_event(date(2025, 1, 1).at(1, 0, 0, 0)).is_none());
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
-    /// # Ok(())
-    /// # }
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
         if self.contains_event(instant) {
@@ -295,44 +353,62 @@ where
 
 /// A builder for [`Series`] values.
 ///
-/// Values of this type are produced by [`Series::builder`]. The `SeriesBuilder` can be
-/// materialized into a `Series` by calling its [`.build()`](SeriesBuilder::build) method with the
-/// desired repeat interval for the event series.
+/// Values of this type are produced by [`Series::with`]. `SeriesWith` can be
+/// materialized into a `Series` by calling its [`.build()`](SeriesWith::build) method.
 ///
 /// The builder allows to configure the following optional parameters for a `Series`:
 ///
 /// - `start`: The datetime at which the series starts. This is not necessarily identical to the
-///   start of the first event in the series. The default value is the current datetime upon
-///   calling the [`SeriesBuilder::build`].
+///   start of the first event in the series.
 /// - `end`: The datetime at which the series ends. The default is [`DateTime::MAX`], which means
 ///   that it only ends when events become unrepresentable as `DateTime`.
 /// - `event_duration`: The [`Span`] of an individual event in the series. This could be minutes,
 ///   hours, days or any other duration the `Span` type supports. If `event_duration` is not set,
 ///   individual events will not have an end datetime and have an effective duration of zero.
-#[derive(Debug, Clone, Default)]
-pub struct SeriesBuilder {
-    start: Option<DateTime>,
-    end: Option<DateTime>,
-    event_duration: Option<Span>,
+/// - `repeat`: The repeat interval for the series.
+#[derive(Debug, Clone)]
+pub struct SeriesWith<R> {
+    repeat: R,
+    bounds: Range<DateTime>,
+    event_duration: Span,
 }
 
-impl SeriesBuilder {
+impl<R> SeriesWith<R>
+where
+    R: Repeat,
+{
+    /// Creates an new `SeriesWith` from a `Series`.
+    fn new(series: Series<R>) -> SeriesWith<R> {
+        SeriesWith {
+            repeat: series.repeat,
+            bounds: series.bounds,
+            event_duration: series.event_duration,
+        }
+    }
+
     /// Sets the start of the series.
-    ///
-    /// If `.start()` is not called with a custom value, the `.build()` method will set the start
-    /// of the series to the current datetime.
     ///
     /// # Example
     ///
     /// ```
-    /// # use recurring::Series;
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
+    /// use recurring::Series;
+    /// use recurring::repeat::daily;
     ///
-    /// let builder = Series::builder().start(date(2025, 1, 1).at(0, 0, 0, 0));
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    ///
+    /// let start = date(2025, 2, 1).at(0, 0, 0, 0);
+    ///
+    /// let s2 = s1.with().start(start).build()?;
+    ///
+    /// assert_eq!(s2.start(), start);
+    /// # Ok(())
+    /// # }
     /// ```
     #[must_use]
-    pub fn start(mut self, start: DateTime) -> SeriesBuilder {
-        self.start = Some(start);
+    pub fn start(mut self, start: DateTime) -> SeriesWith<R> {
+        self.bounds.start = start;
         self
     }
 
@@ -344,14 +420,24 @@ impl SeriesBuilder {
     /// # Example
     ///
     /// ```
-    /// # use recurring::Series;
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
+    /// use recurring::Series;
+    /// use recurring::repeat::daily;
     ///
-    /// let builder = Series::builder().end(date(2025, 1, 1).at(1, 30, 0, 0));
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    ///
+    /// let end = date(2025, 2, 1).at(0, 0, 0, 0);
+    ///
+    /// let s2 = s1.with().end(end).build()?;
+    ///
+    /// assert_eq!(s2.end(), end);
+    /// # Ok(())
+    /// # }
     /// ```
     #[must_use]
-    pub fn end(mut self, end: DateTime) -> SeriesBuilder {
-        self.end = Some(end);
+    pub fn end(mut self, end: DateTime) -> SeriesWith<R> {
+        self.bounds.end = end;
         self
     }
 
@@ -363,16 +449,52 @@ impl SeriesBuilder {
     /// # Example
     ///
     /// ```
-    /// # use recurring::Series;
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::ToSpan;
     /// use jiff::civil::date;
+    /// use recurring::Series;
+    /// use recurring::repeat::daily;
     ///
-    /// let builder = Series::builder().event_duration(1.hour());
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    ///
+    /// let s2 = s1.with().event_duration(1.hour()).build()?;
+    ///
+    /// assert_eq!(s2.event_duration().fieldwise(), 1.hour());
+    /// # Ok(())
+    /// # }
     /// ```
     #[must_use]
-    pub fn event_duration(mut self, event_duration: Span) -> SeriesBuilder {
-        self.event_duration = Some(event_duration);
+    pub fn event_duration(mut self, event_duration: Span) -> SeriesWith<R> {
+        self.event_duration = event_duration;
         self
+    }
+
+    /// Sets the repeat interval for the series.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::ToSpan;
+    /// use jiff::civil::date;
+    /// use recurring::Series;
+    /// use recurring::repeat::daily;
+    ///
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    ///
+    /// let s2 = s1.with().repeat(daily(2)).build()?;
+    ///
+    /// assert_eq!(s2.repeat(), &daily(2));
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn repeat<S: Repeat>(self, repeat: S) -> SeriesWith<S> {
+        SeriesWith {
+            repeat,
+            bounds: self.bounds,
+            event_duration: self.event_duration,
+        }
     }
 
     /// Builds a [`Series`] that yields events according to the provided [`Repeat`] implementation.
@@ -390,32 +512,27 @@ impl SeriesBuilder {
     /// use jiff::civil::date;
     /// use recurring::repeat::daily;
     ///
-    /// let series = Series::builder()
-    ///     .start(date(2025, 1, 1).at(0, 0, 0, 0))
-    ///     .build(daily(1))?;
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    ///
+    /// let s2 = s1.with()
+    ///     .end(date(2025, 1, 3).at(0, 0, 0, 0))
+    ///     .build()?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn build<R>(self, repeat: R) -> Result<Series<R>, Error>
-    where
-        R: Repeat,
-    {
-        let start = self.start.unwrap_or_else(|| Zoned::now().datetime());
-        let end = self.end.unwrap_or(DateTime::MAX);
-        let event_duration = self.event_duration.unwrap_or_default();
-
-        if end <= start {
-            return Err(Error::InvalidSeriesEnd);
+    pub fn build(self) -> Result<Series<R>, Error> {
+        if self.bounds.start >= self.bounds.end {
+            return Err(Error::InvalidBounds);
         }
 
-        if event_duration.is_negative() {
+        if self.event_duration.is_negative() {
             return Err(Error::InvalidEventDuration);
         }
 
         Ok(Series {
-            repeat,
-            bounds: (start..end),
-            event_duration,
+            repeat: self.repeat,
+            bounds: self.bounds,
+            event_duration: self.event_duration,
         })
     }
 }
@@ -479,7 +596,7 @@ mod tests {
     #[test]
     fn daily_series() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2)).unwrap();
+        let series = Series::new(start, daily(2));
         let events: Vec<_> = series.iter().take(5).collect();
         let expected = vec![
             Event::at(datetime(2025, 1, 1, 1, 1, 1, 0)),
@@ -494,8 +611,7 @@ mod tests {
     #[test]
     fn daily_series_at() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-        let series =
-            Series::new(start, daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3))).unwrap();
+        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)));
         let events: Vec<_> = series.iter().take(5).collect();
         let expected = vec![
             Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)),
@@ -511,10 +627,10 @@ mod tests {
     fn daily_series_with_end() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 5, 1, 1, 1, 0);
-        let series = Series::builder()
-            .start(start)
+        let series = Series::new(start, daily(2))
+            .with()
             .end(end)
-            .build(daily(2))
+            .build()
             .unwrap();
         let events: Vec<_> = series.iter().collect();
         let expected = vec![
@@ -528,11 +644,11 @@ mod tests {
     fn daily_series_with_end_and_duration() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 5, 1, 1, 1, 0);
-        let series = Series::builder()
-            .start(start)
+        let series = Series::new(start, daily(2))
+            .with()
             .end(end)
             .event_duration(1.hour())
-            .build(daily(2))
+            .build()
             .unwrap();
 
         let events: Vec<_> = series.iter().collect();
@@ -554,8 +670,7 @@ mod tests {
     #[test]
     fn series_contains_event() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-        let series =
-            Series::new(start, daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3))).unwrap();
+        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)));
         assert!(!series.contains_event(datetime(2025, 1, 1, 1, 1, 1, 0)));
         assert!(series.contains_event(datetime(2025, 1, 1, 2, 2, 2, 2)));
         assert!(series.contains_event(datetime(2025, 1, 1, 3, 3, 3, 3)));
@@ -567,10 +682,10 @@ mod tests {
     fn series_relative_events() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 3, 1, 1, 1, 0);
-        let series = Series::builder()
-            .start(start)
+        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)))
+            .with()
             .end(end)
-            .build(daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)))
+            .build()
             .unwrap();
         assert_eq!(series.get_event(datetime(2025, 1, 1, 1, 1, 1, 0)), None);
         assert_eq!(
@@ -598,10 +713,10 @@ mod tests {
     fn series_get_event_containing() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 3, 1, 1, 1, 0);
-        let series = Series::builder()
-            .start(start)
+        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)))
+            .with()
             .end(end)
-            .build(daily(2).at(time(2, 2, 2, 2)))
+            .build()
             .unwrap();
         assert_eq!(
             series.get_event_containing(datetime(2025, 1, 1, 1, 1, 1, 0)),
@@ -616,11 +731,11 @@ mod tests {
             None
         );
 
-        let series = Series::builder()
-            .start(start)
+        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)))
+            .with()
             .end(end)
             .event_duration(1.hour())
-            .build(daily(2).at(time(2, 2, 2, 2)))
+            .build()
             .unwrap();
 
         assert_eq!(
@@ -655,10 +770,10 @@ mod tests {
     fn series_first_event() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 3, 1, 1, 1, 0);
-        let series = Series::builder()
-            .start(start)
+        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)))
+            .with()
             .end(end)
-            .build(daily(2).at(time(2, 2, 2, 2)))
+            .build()
             .unwrap();
         assert_eq!(
             series.first_event(),
@@ -670,17 +785,17 @@ mod tests {
     fn series_last_event() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 10, 1, 1, 1, 0);
-        let series = Series::builder()
-            .start(start)
+        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)))
+            .with()
             .end(end)
-            .build(daily(2).at(time(2, 2, 2, 2)))
+            .build()
             .unwrap();
         assert_eq!(
             series.last_event(),
             Some(Event::at(datetime(2025, 1, 9, 2, 2, 2, 2)))
         );
 
-        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2))).unwrap();
+        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)));
         assert_eq!(
             series.last_event(),
             Some(Event::at(datetime(9999, 12, 30, 2, 2, 2, 2)))
@@ -690,7 +805,7 @@ mod tests {
     #[test]
     fn series_last_event_unbounded() {
         let start = date(2025, 1, 1).at(1, 1, 1, 0);
-        let series = Series::new(start, hourly(2)).unwrap();
+        let series = Series::new(start, hourly(2));
         assert_eq!(
             series.last_event(),
             Some(Event::at(date(9999, 12, 31).at(23, 1, 1, 0)))
@@ -700,7 +815,7 @@ mod tests {
     #[test]
     fn series_get_closest_event() {
         let start = datetime(2025, 1, 1, 0, 0, 0, 0);
-        let series = Series::new(start, hourly(1)).unwrap();
+        let series = Series::new(start, hourly(1));
 
         assert_eq!(
             series.get_closest_event(datetime(2024, 12, 31, 0, 0, 0, 0)),

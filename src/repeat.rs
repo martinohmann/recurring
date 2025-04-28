@@ -87,6 +87,20 @@ impl Repeat for Interval {
     }
 }
 
+impl PartialEq for Interval {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.fieldwise() == other.0
+    }
+}
+
+impl PartialEq<&Interval> for Interval {
+    fn eq(&self, other: &&Self) -> bool {
+        self.0.fieldwise() == other.0
+    }
+}
+
+impl Eq for Interval {}
+
 /// An interval for daily events which may also include fixed times of the day.
 ///
 /// # Example
@@ -97,7 +111,7 @@ impl Repeat for Interval {
 ///
 /// let every_two_days_at_twelve = Daily::new(1).at(time(12, 0, 0, 0));
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Daily {
     interval: Interval,
     at: Vec<Time>,
