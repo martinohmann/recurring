@@ -124,7 +124,7 @@ impl Daily {
     ///
     /// # Panics
     ///
-    /// Panics if `span` is negative or zero.
+    /// Panics if `interval` is negative or zero.
     ///
     /// # Example
     ///
@@ -146,7 +146,7 @@ impl Daily {
     ///
     /// # Errors
     ///
-    /// Returns an `Error` if `span` is negative or zero.
+    /// Returns an `Error` if `interval` is negative or zero.
     ///
     /// # Example
     ///

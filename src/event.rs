@@ -211,10 +211,7 @@ impl Event {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn to_series<R>(&self, repeat: R) -> Result<Series<R>, Error>
-    where
-        R: Repeat,
-    {
+    pub fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
         let series = Series::try_new(self.start, repeat)?;
 
         if let Some(duration) = self.duration() {
