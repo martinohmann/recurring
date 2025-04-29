@@ -22,7 +22,5 @@ pub trait Repeat {
 
     fn previous_event(&self, instant: DateTime) -> Option<DateTime>;
 
-    fn is_aligned_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> bool;
-
     fn align_to_series(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime>;
 }

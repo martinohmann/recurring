@@ -246,7 +246,7 @@ where
     /// assert!(series.contains_event(date(2025, 2, 10).at(12, 0, 0, 0)));
     /// ```
     pub fn contains_event(&self, instant: DateTime) -> bool {
-        self.bounds.contains(&instant) && self.repeat.is_aligned_to_series(instant, &self.bounds)
+        self.get_event(instant).is_some()
     }
 
     /// Gets an event in the series.
@@ -266,8 +266,10 @@ where
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        if self.repeat.is_aligned_to_series(instant, &self.bounds) {
-            self.get_event_aligned(instant)
+        let aligned = self.repeat.align_to_series(instant, &self.bounds)?;
+
+        if aligned == instant {
+            self.get_event_unchecked(instant)
         } else {
             None
         }
