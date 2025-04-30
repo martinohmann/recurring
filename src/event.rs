@@ -1,4 +1,4 @@
-use crate::{Error, Repeat, Series};
+use crate::Error;
 use jiff::{Span, civil::DateTime};
 
 /// Represents an event that happens at a given point in time and may span until an optional end
@@ -178,46 +178,6 @@ impl Event {
             instant >= self.start && instant < end
         } else {
             instant == self.start
-        }
-    }
-
-    /// Converts an event to a `Series` with the given [`Repeat`] interval.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the event duration cannot be represented as a [`Span`] or if the
-    /// events' `start` is `DateTime::MAX`.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// # use recurring::Event;
-    /// use recurring::repeat::hourly;
-    /// use jiff::ToSpan;
-    /// use jiff::civil::date;
-    ///
-    /// let date = date(2025, 1, 1);
-    /// let start = date.at(0, 0, 0, 0);
-    /// let end = date.at(0, 30, 0, 0);
-    ///
-    /// let event = Event::new(start, end)?;
-    /// let series = event.to_series(hourly(2))?;
-    ///
-    /// let mut events = series.iter();
-    ///
-    /// assert_eq!(events.next(), Some(Event::new(date.at(0, 0, 0, 0), date.at(0, 30, 0, 0))?));
-    /// assert_eq!(events.next(), Some(Event::new(date.at(2, 0, 0, 0), date.at(2, 30, 0, 0))?));
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
-        let series = Series::try_new(self.start, repeat)?;
-
-        if let Some(duration) = self.duration() {
-            series.with().event_duration(duration).build()
-        } else {
-            Ok(series)
         }
     }
 }
