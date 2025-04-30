@@ -246,7 +246,7 @@ where
     /// assert!(series.contains_event(date(2025, 2, 10).at(12, 0, 0, 0)));
     /// ```
     pub fn contains_event(&self, instant: DateTime) -> bool {
-        self.bounds.contains(&instant) && self.repeat.is_aligned_to_series(instant, &self.bounds)
+        self.get_event(instant).is_some()
     }
 
     /// Gets an event in the series.
@@ -266,22 +266,12 @@ where
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        if self.repeat.is_aligned_to_series(instant, &self.bounds) {
-            self.get_event_aligned(instant)
-        } else {
-            None
+        let closest = self.repeat.closest_event(instant, &self.bounds)?;
+        if closest == instant {
+            return self.get_event_unchecked(instant);
         }
-    }
 
-    /// Get an event without any alignment checks. The datetime at `start` is assumed to be aligned to
-    /// the series but not necessarily within the series start and end bounds.
-    #[inline]
-    fn get_event_aligned(&self, start: DateTime) -> Option<Event> {
-        if self.bounds.contains(&start) {
-            self.get_event_unchecked(start)
-        } else {
-            None
-        }
+        None
     }
 
     /// Get an event without any bound checks. The datetime at `start` is assumed to be aligned to
@@ -297,59 +287,39 @@ where
     }
 
     pub fn get_event_containing(&self, instant: DateTime) -> Option<Event> {
-        if let Some(event) = self.get_event(instant) {
-            return Some(event);
-        }
-
-        let previous = self.get_event_before(instant)?;
-
-        if previous.contains(instant) {
-            Some(previous)
-        } else {
-            None
-        }
+        self.get_event(instant)
+            .or_else(|| self.get_event_before(instant))
+            .filter(|event| event.contains(instant))
     }
 
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
-        let mut start = self.repeat.align_to_series(instant, &self.bounds)?;
-
-        if start <= instant {
-            start = self.repeat.next_event(start)?;
+        let closest = self.repeat.closest_event(instant, &self.bounds)?;
+        if closest > instant {
+            return self.get_event_unchecked(closest);
         }
 
-        self.get_event_aligned(start)
+        self.repeat
+            .next_event(closest)
+            .filter(|next| self.bounds.contains(next))
+            .and_then(|next| self.get_event_unchecked(next))
     }
 
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
-        let mut start = self.repeat.align_to_series(instant, &self.bounds)?;
-
-        if start >= instant {
-            start = self.repeat.previous_event(start)?;
+        let closest = self.repeat.closest_event(instant, &self.bounds)?;
+        if closest < instant {
+            return self.get_event_unchecked(closest);
         }
 
-        self.get_event_aligned(start)
+        self.repeat
+            .previous_event(closest)
+            .filter(|previous| self.bounds.contains(previous))
+            .and_then(|previous| self.get_event_unchecked(previous))
     }
 
     pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
-        if let Some(event) = self.get_event(instant) {
-            return Some(event);
-        }
-
-        match (
-            self.get_event_before(instant),
-            self.get_event_after(instant),
-        ) {
-            (Some(before), Some(after)) => {
-                if before.start().duration_until(instant) < after.start().duration_since(instant) {
-                    Some(before)
-                } else {
-                    Some(after)
-                }
-            }
-            (Some(before), None) => Some(before),
-            (None, Some(after)) => Some(after),
-            (None, None) => None,
-        }
+        self.repeat
+            .closest_event(instant, &self.bounds)
+            .and_then(|closest| self.get_event_unchecked(closest))
     }
 }
 
