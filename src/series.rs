@@ -274,24 +274,105 @@ where
         None
     }
 
-    /// Get an event without any bound checks. The datetime at `start` is assumed to be aligned to
-    /// the series and within the series start and end bounds.
-    #[inline]
-    fn get_event_unchecked(&self, start: DateTime) -> Option<Event> {
-        if self.event_duration.is_positive() {
-            let end = start.checked_add(self.event_duration).ok()?;
-            Event::new(start, end).ok()
-        } else {
-            Some(Event::at(start))
-        }
-    }
-
+    /// Gets the event containing `instant`.
+    ///
+    /// Returns `None` if there's no event in the series that start at `instant` or contains it (if
+    /// series events have a duration).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::ToSpan;
+    /// use jiff::civil::{date, DateTime};
+    /// use recurring::{Event, Series};
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let series_end = date(2025, 2, 1).at(0, 0, 0, 0);
+    /// let series = Series::new(series_start, hourly(1))
+    ///     .with()
+    ///     .end(series_end)
+    ///     .event_duration(30.minutes())
+    ///     .build()?;
+    ///
+    /// assert_eq!(
+    ///     series.get_event_containing(series_start - 1.minute()),
+    ///     None,
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_containing(series_start),
+    ///     Some(Event::new(series_start, series_start + 30.minutes())?),
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_containing(series_start + 31.minutes()),
+    ///     None,
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_containing(series_start + 1.hour().minutes(20)),
+    ///     Some(Event::new(series_start + 1.hour(), series_start + 1.hour().minutes(30))?),
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_containing(series_end),
+    ///     None,
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn get_event_containing(&self, instant: DateTime) -> Option<Event> {
         self.get_event(instant)
             .or_else(|| self.get_event_before(instant))
             .filter(|event| event.contains(instant))
     }
 
+    /// Gets the next event after `instant`.
+    ///
+    /// Returns `None` if `instant` is close to the series end and there's no more event between
+    /// `instant` and the series end.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::ToSpan;
+    /// use jiff::civil::{date, DateTime};
+    /// use recurring::{Event, Series};
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let series_end = date(2025, 2, 1).at(0, 0, 0, 0);
+    /// let series = Series::new(series_start, hourly(1))
+    ///     .with()
+    ///     .end(series_end)
+    ///     .build()?;
+    ///
+    /// assert_eq!(
+    ///     series.get_event_after(series_start - 1.minute()),
+    ///     Some(Event::at(series_start)),
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_after(series_start),
+    ///     Some(Event::at(series_start + 1.hour())),
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_after(series_start + 1.minute()),
+    ///     Some(Event::at(series_start + 1.hour())),
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_after(series_end - 1.hour().minutes(1)),
+    ///     Some(Event::at(series_end - 1.hour())),
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_after(series_end - 1.hour()),
+    ///     None,
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_after(series_end),
+    ///     None,
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
         let closest = self.repeat.closest_event(instant, &self.bounds)?;
         if closest > instant {
@@ -304,6 +385,40 @@ where
             .and_then(|next| self.get_event_unchecked(next))
     }
 
+    /// Gets the previous event before `instant`.
+    ///
+    /// Returns `None` if `instant` is less than or equal to the series start.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jiff::ToSpan;
+    /// use jiff::civil::{date, DateTime};
+    /// use recurring::{Event, Series};
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let series = Series::new(series_start, hourly(1));
+    ///
+    /// assert_eq!(series.get_event_before(series_start), None);
+    /// assert_eq!(series.get_event_before(series_start - 1.minute()), None);
+    /// assert_eq!(
+    ///     series.get_event_before(series_start + 29.minute()),
+    ///     Some(Event::at(series_start)),
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_before(series_start + 1.hour()),
+    ///     Some(Event::at(series_start)),
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_before(series_start + 1.hour().seconds(1)),
+    ///     Some(Event::at(series_start + 1.hour())),
+    /// );
+    /// assert_eq!(
+    ///     series.get_event_before(DateTime::MAX),
+    ///     Some(Event::at(date(9999, 12, 31).at(23, 0, 0, 0))),
+    /// );
+    /// ```
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
         let closest = self.repeat.closest_event(instant, &self.bounds)?;
         if closest < instant {
@@ -316,10 +431,54 @@ where
             .and_then(|previous| self.get_event_unchecked(previous))
     }
 
+    /// Gets the series event with the start time closest to `instant`.
+    ///
+    /// The returned event may start before, at or after `instant`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jiff::ToSpan;
+    /// use jiff::civil::date;
+    /// use recurring::{Event, Series};
+    /// use recurring::repeat::hourly;
+    ///
+    /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let series = Series::new(series_start, hourly(1));
+    ///
+    /// assert_eq!(
+    ///     series.get_closest_event(series_start),
+    ///     Some(Event::at(series_start)),
+    /// );
+    /// assert_eq!(
+    ///     series.get_closest_event(series_start - 1.minute()),
+    ///     Some(Event::at(series_start)),
+    /// );
+    /// assert_eq!(
+    ///     series.get_closest_event(series_start + 29.minutes()),
+    ///     Some(Event::at(series_start)),
+    /// );
+    /// assert_eq!(
+    ///     series.get_closest_event(series_start + 30.minutes()),
+    ///     Some(Event::at(series_start + 1.hour())),
+    /// );
+    /// ```
     pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
         self.repeat
             .closest_event(instant, &self.bounds)
             .and_then(|closest| self.get_event_unchecked(closest))
+    }
+
+    /// Get an event without any bound checks. The datetime at `start` is assumed to be aligned to
+    /// the series and within the series start and end bounds.
+    #[inline]
+    fn get_event_unchecked(&self, start: DateTime) -> Option<Event> {
+        if self.event_duration.is_positive() {
+            let end = start.checked_add(self.event_duration).ok()?;
+            Event::new(start, end).ok()
+        } else {
+            Some(Event::at(start))
+        }
     }
 }
 
