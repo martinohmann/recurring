@@ -66,13 +66,10 @@ impl ToSeries for Event {
     /// # }
     /// ```
     fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
-        let series = Series::try_new(self.start(), repeat)?;
-
-        if let Some(duration) = self.duration() {
-            series.with().event_duration(duration).build()
-        } else {
-            Ok(series)
-        }
+        Series::try_new(self.start(), repeat)?
+            .with()
+            .event_duration(self.duration())
+            .build()
     }
 }
 
