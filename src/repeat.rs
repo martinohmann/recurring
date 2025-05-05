@@ -78,8 +78,8 @@ impl Repeat for Interval {
         instant.checked_sub(self.0).ok()
     }
 
-    fn closest_event(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
-        closest_event(instant, bounds, self.0)
+    fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+        closest_event(instant, range, self.0)
     }
 }
 
@@ -236,17 +236,17 @@ impl Repeat for Daily {
             .ok()
     }
 
-    fn closest_event(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime> {
+    fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
-            return self.interval.closest_event(instant, bounds);
+            return self.interval.closest_event(instant, range);
         }
 
-        let closest = self.interval.closest_event(instant, bounds)?;
+        let closest = self.interval.closest_event(instant, range)?;
 
         self.at
             .iter()
             .filter_map(|time| closest.with().time(*time).build().ok())
-            .filter(|date| bounds.contains(date))
+            .filter(|date| range.contains(date))
             .min_by_key(|date| date.duration_since(instant).abs())
     }
 }
@@ -378,25 +378,25 @@ pub fn yearly<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.years())
 }
 
-fn closest_event(instant: DateTime, bounds: &Range<DateTime>, interval: Span) -> Option<DateTime> {
-    let intervals = intervals_until_closest_event(instant, bounds, interval)?;
-    bounds.start.checked_add(intervals * interval).ok()
+fn closest_event(instant: DateTime, range: &Range<DateTime>, interval: Span) -> Option<DateTime> {
+    let intervals = intervals_until_closest_event(instant, range, interval)?;
+    range.start.checked_add(intervals * interval).ok()
 }
 
 fn intervals_until_closest_event(
     instant: DateTime,
-    bounds: &Range<DateTime>,
+    range: &Range<DateTime>,
     interval: Span,
 ) -> Option<i64> {
-    if instant <= bounds.start {
+    if instant <= range.start {
         return Some(0);
     }
 
-    let end = instant.min(bounds.end);
-    let intervals = intervals_until(bounds.start, end, interval)?;
+    let end = instant.min(range.end);
+    let intervals = intervals_until(range.start, end, interval)?;
     let mut intervals_rounded = intervals.round();
 
-    if end == bounds.end && intervals_rounded >= intervals {
+    if end == range.end && intervals_rounded >= intervals {
         // The series would hit the end bound exactly or due to rounding up. We need to substract
         // an interval because the series end bound is exclusive.
         intervals_rounded -= 1.0;
