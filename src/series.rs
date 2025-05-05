@@ -185,6 +185,10 @@ where
     ///
     /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
     /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
+    ///
+    /// // Get events from the end of the series.
+    /// assert_eq!(events.next_back(), Some(Event::at(date(9999, 12, 31).at(22, 0, 0, 0))));
+    /// assert_eq!(events.next_back(), Some(Event::at(date(9999, 12, 31).at(20, 0, 0, 0))));
     /// ```
     pub fn iter(&self) -> Iter<'_, R> {
         Iter::new(self)
@@ -725,14 +729,18 @@ where
 #[derive(Debug, Clone)]
 pub struct Iter<'a, R> {
     series: &'a Series<R>,
-    next_start: Option<DateTime>,
+    first: bool,
+    cursor_front: Option<DateTime>,
+    cursor_back: Option<DateTime>,
 }
 
-impl<'a, R> Iter<'a, R> {
+impl<'a, R: Repeat> Iter<'a, R> {
     fn new(series: &'a Series<R>) -> Iter<'a, R> {
         Iter {
             series,
-            next_start: Some(series.range.start),
+            first: true,
+            cursor_front: Some(series.start()),
+            cursor_back: Some(series.end()),
         }
     }
 }
@@ -744,22 +752,28 @@ where
     type Item = Event;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let series = &self.series;
-        let start = self.next_start?;
+        let cursor = self.cursor_front.take()?;
+        let event = if self.first {
+            self.first = false;
+            self.series.first_event()?
+        } else {
+            self.series.get_event_after(cursor)?
+        };
 
-        if !series.range.contains(&start) {
-            return None;
-        }
+        self.cursor_front = Some(event.start());
+        Some(event)
+    }
+}
 
-        self.next_start = series.repeat.next_event(start);
-
-        // Handle the case where the series start does not fall into the desired frequency and
-        // skip over to the next event right away.
-        if start == series.range.start && !series.contains_event(start) {
-            return self.next();
-        }
-
-        series.get_event_unchecked(start)
+impl<R> DoubleEndedIterator for Iter<'_, R>
+where
+    R: Repeat,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let cursor = self.cursor_back.take()?;
+        let event = self.series.get_event_before(cursor)?;
+        self.cursor_back = Some(event.start());
+        Some(event)
     }
 }
 
@@ -790,6 +804,28 @@ mod tests {
         let series = Series::new(..=end, daily(1));
         assert_eq!(series.start(), DateTime::MIN);
         assert_eq!(series.end(), end + 1.nanosecond());
+    }
+
+    #[test]
+    fn series_iter() {
+        let start = date(2025, 1, 1).at(0, 0, 0, 0);
+        let end = date(2025, 1, 2).at(0, 0, 0, 0);
+
+        let series = Series::new(start..end, hourly(6));
+        let mut iter = series.iter();
+
+        assert_eq!(iter.next(), Some(Event::at(start)));
+        assert_eq!(iter.next_back(), Some(Event::at(end - 6.hours())));
+        assert_eq!(iter.next(), Some(Event::at(start + 6.hours())));
+        assert_eq!(iter.next(), Some(Event::at(start + 12.hours())));
+        assert_eq!(iter.next_back(), Some(Event::at(end - 12.hours())));
+        assert_eq!(iter.next(), Some(Event::at(end - 6.hours())));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), Some(Event::at(start + 6.hours())));
+        assert_eq!(iter.next_back(), Some(Event::at(start)));
+        assert_eq!(iter.next_back(), None);
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
     }
 
     #[test]
