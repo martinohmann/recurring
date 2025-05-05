@@ -1,4 +1,4 @@
-use crate::{Error, Event, IntoBounds, Repeat, try_simplify_range};
+use crate::{Error, Event, IntoBounds, Repeat, error::ErrorKind, try_simplify_range};
 use core::ops::{Bound, Range, RangeBounds};
 use jiff::{Span, civil::DateTime};
 
@@ -102,7 +102,7 @@ where
     pub fn try_new<B: RangeBounds<DateTime>>(range: B, repeat: R) -> Result<Series<R>, Error> {
         let range = try_simplify_range(range)?;
         if range.start >= range.end {
-            return Err(Error::InvalidBounds);
+            return Err(Error::from(ErrorKind::InvalidBounds));
         }
 
         Ok(Series {
@@ -703,11 +703,11 @@ where
     pub fn build(self) -> Result<Series<R>, Error> {
         let range = try_simplify_range(self.bounds)?;
         if range.start >= range.end {
-            return Err(Error::InvalidBounds);
+            return Err(Error::from(ErrorKind::InvalidBounds));
         }
 
         if self.event_duration.is_negative() {
-            return Err(Error::InvalidEventDuration);
+            return Err(Error::from(ErrorKind::InvalidEventDuration));
         }
 
         Ok(Series {

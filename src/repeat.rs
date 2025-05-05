@@ -1,5 +1,5 @@
 //! Types for specifying repeat intervals.
-use crate::{Error, Repeat};
+use crate::{Error, Repeat, error::ErrorKind};
 use alloc::vec::Vec;
 use core::ops::Range;
 use jiff::{
@@ -62,7 +62,7 @@ impl Interval {
     /// ```
     pub fn try_new(span: Span) -> Result<Interval, Error> {
         if !span.is_positive() {
-            return Err(Error::InvalidInterval);
+            return Err(Error::from(ErrorKind::InvalidInterval));
         }
 
         Ok(Interval(span))

@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{Error, error::ErrorKind};
 use jiff::{Span, civil::DateTime};
 
 /// Represents an event that happens at a given point in time and may span until an optional end
@@ -72,7 +72,7 @@ impl Event {
     /// ```
     pub fn new(start: DateTime, end: DateTime) -> Result<Event, Error> {
         if start >= end {
-            return Err(Error::InvalidBounds);
+            return Err(Error::from(ErrorKind::InvalidBounds));
         }
 
         Ok(Event {
