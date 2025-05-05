@@ -20,7 +20,7 @@ use jiff::{Span, civil::DateTime};
 /// let event = Event::new(start, end)?;
 /// assert_eq!(event.start(), start);
 /// assert_eq!(event.end(), Some(end));
-/// assert_eq!(event.duration().unwrap().fieldwise(), 1.day());
+/// assert_eq!(event.duration().fieldwise(), 1.day());
 /// # Ok(())
 /// # }
 /// ```
@@ -51,7 +51,7 @@ impl Event {
         }
     }
 
-    /// Creates a new `Event` which span from a `start` (inclusive) to an `end` (exclusive).
+    /// Creates a new `Event` which spans from a `start` (inclusive) to an `end` (exclusive).
     ///
     /// # Errors
     ///
@@ -97,7 +97,7 @@ impl Event {
         self.start
     }
 
-    /// Returns the `DateTime` at which the event end if it has an end, `None` otherwise.
+    /// Returns the `DateTime` at which the event ends if it has an end, `None` otherwise.
     ///
     /// # Example
     ///
@@ -120,7 +120,9 @@ impl Event {
         self.end
     }
 
-    /// Returns the duration between the events' start and end if it has an end, `None` otherwise.
+    /// Returns the duration between the events' start and end.
+    ///
+    /// For events that don't have an end, this always returns a zero `Span`.
     ///
     /// # Example
     ///
@@ -132,16 +134,18 @@ impl Event {
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let event = Event::at(start);
-    /// assert!(event.duration().is_none());
+    /// assert!(event.duration().is_zero());
     ///
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
     /// let event = Event::new(start, end)?;
-    /// assert_eq!(event.duration().unwrap().fieldwise(), 1.day());
+    /// assert_eq!(event.duration().fieldwise(), 1.day());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn duration(&self) -> Option<Span> {
-        self.end.and_then(|end| self.start.until(end).ok())
+    pub fn duration(&self) -> Span {
+        self.end
+            .and_then(|end| self.start.until(end).ok())
+            .unwrap_or_default()
     }
 
     /// Returns `true` if `instant` falls within the events' duration, `false` otherwise.
