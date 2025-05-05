@@ -1,5 +1,5 @@
-use crate::{Error, Event, Repeat};
-use core::ops::Range;
+use crate::{Error, Event, IntoBounds, Repeat, try_simplify_range};
+use core::ops::{Bound, Range, RangeBounds};
 use jiff::{Span, civil::DateTime};
 
 /// A series of recurring events.
@@ -15,10 +15,7 @@ use jiff::{Span, civil::DateTime};
 /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
 /// let end = date(2025, 1, 1).at(4, 0, 0, 0);
 ///
-/// let series = Series::new(start, hourly(2))
-///     .with()
-///     .end(end)
-///     .build()?;
+/// let series = Series::new(start..end, hourly(2));
 ///
 /// let mut events = series.iter();
 ///
@@ -31,7 +28,7 @@ use jiff::{Span, civil::DateTime};
 #[derive(Debug, Clone)]
 pub struct Series<R> {
     repeat: R,
-    bounds: Range<DateTime>,
+    range: Range<DateTime>,
     event_duration: Span,
 }
 
@@ -39,8 +36,8 @@ impl<R> Series<R>
 where
     R: Repeat,
 {
-    /// Creates a new `Series` starting at `start` that produces events in the given `repeat`
-    /// interval.
+    /// Creates a new `Series` that produces events within the provided `range` according to the
+    /// given `repeat` interval.
     ///
     /// To configure more aspects of the series call `.with()` on the constructed
     /// `Series` value. See the documentation of [`Series::with`] for more details.
@@ -49,7 +46,8 @@ where
     ///
     /// # Panics
     ///
-    /// Panics if `start` is `DateTime::MAX`.
+    /// Panics if the start or end of the range bounds would overflow `DateTime::MAX` after
+    /// normalization or if `start` >= `end`.
     ///
     /// # Example
     ///
@@ -58,25 +56,25 @@ where
     /// # use recurring::Series;
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     /// ```
-    pub fn new(start: DateTime, repeat: R) -> Series<R> {
-        let end = DateTime::MAX;
+    pub fn new<B: RangeBounds<DateTime>>(range: B, repeat: R) -> Series<R> {
+        let range = try_simplify_range(range).expect("range overflows DateTime::MAX");
 
         assert!(
-            start < end,
+            range.start < range.end,
             "invalid bounds: end must be greater than start"
         );
 
         Series {
             repeat,
-            bounds: start..end,
+            range,
             event_duration: Span::new(),
         }
     }
 
-    /// Creates a new `Series` starting at `start` that produces events in the given `repeat`
-    /// interval.
+    /// Creates a new `Series` that produces events within the provided `range` according to the
+    /// given `repeat` interval.
     ///
     /// To configure more aspects of the series call `.with()` on the constructed
     /// `Series` value. See the documentation of [`Series::with`] for more details.
@@ -85,7 +83,8 @@ where
     ///
     /// # Errors
     ///
-    /// Returns an `Error` if `start` is `DateTime::MAX`.
+    /// Returns an `Error` if the start or end of the range bounds would overflow `DateTime::MAX`
+    /// after normalization or if `start` >= `end`.
     ///
     /// # Example
     ///
@@ -95,21 +94,20 @@ where
     /// # use recurring::Series;
     /// use recurring::repeat::hourly;
     ///
-    /// assert!(Series::try_new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2)).is_ok());
-    /// assert!(Series::try_new(DateTime::MAX, hourly(2)).is_err());
+    /// assert!(Series::try_new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2)).is_ok());
+    /// assert!(Series::try_new(DateTime::MAX.., hourly(2)).is_err());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn try_new(start: DateTime, repeat: R) -> Result<Series<R>, Error> {
-        let end = DateTime::MAX;
-
-        if start >= end {
+    pub fn try_new<B: RangeBounds<DateTime>>(range: B, repeat: R) -> Result<Series<R>, Error> {
+        let range = try_simplify_range(range)?;
+        if range.start >= range.end {
             return Err(Error::InvalidBounds);
         }
 
         Ok(Series {
             repeat,
-            bounds: start..end,
+            range,
             event_duration: Span::new(),
         })
     }
@@ -127,7 +125,7 @@ where
     /// use jiff::civil::date;
     /// use recurring::repeat::daily;
     ///
-    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
     /// let s2 = s1.with()
     ///     .end(date(2025, 2, 1).at(0, 0, 0, 0))
@@ -140,19 +138,24 @@ where
         SeriesWith::new(self)
     }
 
-    /// Returns the `DateTime` at which the series starts.
+    /// Returns the range from series start (inclusive) to series end (exclusive).
+    pub fn range(&self) -> &Range<DateTime> {
+        &self.range
+    }
+
+    /// Returns the `DateTime` at which the series starts (inclusive).
     ///
     /// This is not necessarily the time of the first event in the series.
     pub fn start(&self) -> DateTime {
-        self.bounds.start
+        self.range.start
     }
 
-    /// Returns the `DateTime` at which the series end.
+    /// Returns the `DateTime` at which the series ends (exclusive).
     ///
-    /// Don't confuse this with the time of the last event in the series. It is merely an exclusive
-    /// upper bound until which the series will yield events.
+    /// Don't confuse this with the time of the last event in the series. It is merely an upper
+    /// bound until which the series will yield events.
     pub fn end(&self) -> DateTime {
-        self.bounds.end
+        self.range.end
     }
 
     /// Returns the duration of individual events in the series.
@@ -176,7 +179,7 @@ where
     /// use recurring::{Event, Series};
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
     /// let mut events = series.iter();
     ///
@@ -196,13 +199,13 @@ where
     /// use recurring::{Event, Series};
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
     /// assert_eq!(series.first_event(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
     /// ```
     pub fn first_event(&self) -> Option<Event> {
-        self.get_event(self.bounds.start)
-            .or_else(|| self.get_event_after(self.bounds.start))
+        self.get_event(self.range.start)
+            .or_else(|| self.get_event_after(self.range.start))
     }
 
     /// Gets the last event in the series.
@@ -218,17 +221,17 @@ where
     /// use recurring::{Event, Series};
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2))
-    ///     .with()
-    ///     .end(date(2026, 1, 1).at(0, 0, 0, 0))
-    ///     .build()?;
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let end = date(2026, 1, 1).at(0, 0, 0, 0);
+    ///
+    /// let series = Series::new(start..end, hourly(2));
     ///
     /// assert_eq!(series.last_event(), Some(Event::at(date(2025, 12, 31).at(22, 0, 0, 0))));
     /// # Ok(())
     /// # }
     /// ```
     pub fn last_event(&self) -> Option<Event> {
-        self.get_event_before(self.bounds.end)
+        self.get_event_before(self.range.end)
     }
 
     /// Returns `true` when the series contains an event starting at `instant`.
@@ -240,7 +243,7 @@ where
     /// # use recurring::Series;
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
     /// assert!(!series.contains_event(date(2025, 1, 1).at(0, 35, 0, 0)));
     /// assert!(series.contains_event(date(2025, 2, 10).at(12, 0, 0, 0)));
@@ -260,13 +263,13 @@ where
     /// use recurring::{Event, Series};
     /// use recurring::repeat::hourly;
     ///
-    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), hourly(2));
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
     /// assert!(series.get_event(date(2025, 1, 1).at(1, 0, 0, 0)).is_none());
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        let closest = self.repeat.closest_event(instant, &self.bounds)?;
+        let closest = self.repeat.closest_event(instant, &self.range)?;
         if closest == instant {
             return self.get_event_unchecked(instant);
         }
@@ -290,9 +293,8 @@ where
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series_end = date(2025, 2, 1).at(0, 0, 0, 0);
-    /// let series = Series::new(series_start, hourly(1))
+    /// let series = Series::new(series_start..series_end, hourly(1))
     ///     .with()
-    ///     .end(series_end)
     ///     .event_duration(30.minutes())
     ///     .build()?;
     ///
@@ -341,10 +343,7 @@ where
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series_end = date(2025, 2, 1).at(0, 0, 0, 0);
-    /// let series = Series::new(series_start, hourly(1))
-    ///     .with()
-    ///     .end(series_end)
-    ///     .build()?;
+    /// let series = Series::new(series_start..series_end, hourly(1));
     ///
     /// assert_eq!(
     ///     series.get_event_after(series_start - 1.minute()),
@@ -374,14 +373,14 @@ where
     /// # }
     /// ```
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
-        let closest = self.repeat.closest_event(instant, &self.bounds)?;
+        let closest = self.repeat.closest_event(instant, &self.range)?;
         if closest > instant {
             return self.get_event_unchecked(closest);
         }
 
         self.repeat
             .next_event(closest)
-            .filter(|next| self.bounds.contains(next))
+            .filter(|next| self.range.contains(next))
             .and_then(|next| self.get_event_unchecked(next))
     }
 
@@ -398,7 +397,7 @@ where
     /// use recurring::repeat::hourly;
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
-    /// let series = Series::new(series_start, hourly(1));
+    /// let series = Series::new(series_start.., hourly(1));
     ///
     /// assert_eq!(series.get_event_before(series_start), None);
     /// assert_eq!(series.get_event_before(series_start - 1.minute()), None);
@@ -420,14 +419,14 @@ where
     /// );
     /// ```
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
-        let closest = self.repeat.closest_event(instant, &self.bounds)?;
+        let closest = self.repeat.closest_event(instant, &self.range)?;
         if closest < instant {
             return self.get_event_unchecked(closest);
         }
 
         self.repeat
             .previous_event(closest)
-            .filter(|previous| self.bounds.contains(previous))
+            .filter(|previous| self.range.contains(previous))
             .and_then(|previous| self.get_event_unchecked(previous))
     }
 
@@ -444,7 +443,7 @@ where
     /// use recurring::repeat::hourly;
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
-    /// let series = Series::new(series_start, hourly(1));
+    /// let series = Series::new(series_start.., hourly(1));
     ///
     /// assert_eq!(
     ///     series.get_closest_event(series_start),
@@ -465,7 +464,7 @@ where
     /// ```
     pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
         self.repeat
-            .closest_event(instant, &self.bounds)
+            .closest_event(instant, &self.range)
             .and_then(|closest| self.get_event_unchecked(closest))
     }
 
@@ -512,7 +511,7 @@ where
 #[derive(Debug, Clone)]
 pub struct SeriesWith<R> {
     repeat: R,
-    bounds: Range<DateTime>,
+    bounds: (Bound<DateTime>, Bound<DateTime>),
     event_duration: Span,
 }
 
@@ -524,12 +523,49 @@ where
     fn new(series: Series<R>) -> SeriesWith<R> {
         SeriesWith {
             repeat: series.repeat,
-            bounds: series.bounds,
+            bounds: series.range.into_bounds(),
             event_duration: series.event_duration,
         }
     }
 
+    /// Sets the range of the series.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::{ToSpan};
+    /// use jiff::civil::date;
+    /// use recurring::Series;
+    /// use recurring::repeat::daily;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    ///
+    /// let s1 = Series::new(start.., daily(1));
+    ///
+    /// let new_start = s1.start() + 1.day();
+    /// let new_end = new_start + 1.month();
+    ///
+    /// // The new range includes `new_end`.
+    /// let s2 = s1.with().range(new_start..=new_end).build()?;
+    ///
+    /// assert_eq!(s2.start(), new_start);
+    ///
+    /// // The since `new_end` is included in the series, it actually ends 1ns after that!
+    /// assert_eq!(s2.end(), new_end + 1.nanosecond());
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn range<B: RangeBounds<DateTime>>(mut self, range: B) -> SeriesWith<R> {
+        self.bounds = range.into_bounds();
+        self
+    }
+
     /// Sets the start of the series.
+    ///
+    /// The start is inclusive and can (but does not have to) mark the first event from the series.
+    /// This depends on the period of the series.
     ///
     /// # Example
     ///
@@ -539,7 +575,7 @@ where
     /// use recurring::Series;
     /// use recurring::repeat::daily;
     ///
-    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
     /// let start = date(2025, 2, 1).at(0, 0, 0, 0);
     ///
@@ -551,14 +587,15 @@ where
     /// ```
     #[must_use]
     pub fn start(mut self, start: DateTime) -> SeriesWith<R> {
-        self.bounds.start = start;
+        self.bounds.0 = Bound::Included(start);
         self
     }
 
     /// Sets the end of the series.
     ///
-    /// The end of the series defaults to [`DateTime::MAX`] if `.end()` is not called with a custom
-    /// value.
+    /// The end is exclusive and will never be returned as an event from `Series`' iterator and its
+    /// various lookup methods. If you need to set the `end` inclusively, consider using a
+    /// [`.range(start..=end)`][SeriesWith::range] instead.
     ///
     /// # Example
     ///
@@ -568,7 +605,7 @@ where
     /// use recurring::Series;
     /// use recurring::repeat::daily;
     ///
-    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
     /// let end = date(2025, 2, 1).at(0, 0, 0, 0);
     ///
@@ -580,7 +617,7 @@ where
     /// ```
     #[must_use]
     pub fn end(mut self, end: DateTime) -> SeriesWith<R> {
-        self.bounds.end = end;
+        self.bounds.1 = Bound::Excluded(end);
         self
     }
 
@@ -598,7 +635,7 @@ where
     /// use recurring::Series;
     /// use recurring::repeat::daily;
     ///
-    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
     /// let s2 = s1.with().event_duration(1.hour()).build()?;
     ///
@@ -623,7 +660,7 @@ where
     /// use recurring::Series;
     /// use recurring::repeat::daily;
     ///
-    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
     /// let s2 = s1.with().repeat(daily(2)).build()?;
     ///
@@ -655,7 +692,7 @@ where
     /// use jiff::civil::date;
     /// use recurring::repeat::daily;
     ///
-    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0), daily(1));
+    /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
     /// let s2 = s1.with()
     ///     .end(date(2025, 1, 3).at(0, 0, 0, 0))
@@ -664,7 +701,8 @@ where
     /// # }
     /// ```
     pub fn build(self) -> Result<Series<R>, Error> {
-        if self.bounds.start >= self.bounds.end {
+        let range = try_simplify_range(self.bounds)?;
+        if range.start >= range.end {
             return Err(Error::InvalidBounds);
         }
 
@@ -674,7 +712,7 @@ where
 
         Ok(Series {
             repeat: self.repeat,
-            bounds: self.bounds,
+            range,
             event_duration: self.event_duration,
         })
     }
@@ -694,7 +732,7 @@ impl<'a, R> Iter<'a, R> {
     fn new(series: &'a Series<R>) -> Iter<'a, R> {
         Iter {
             series,
-            next_start: Some(series.bounds.start),
+            next_start: Some(series.range.start),
         }
     }
 }
@@ -709,7 +747,7 @@ where
         let series = &self.series;
         let start = self.next_start?;
 
-        if !series.bounds.contains(&start) {
+        if !series.range.contains(&start) {
             return None;
         }
 
@@ -717,7 +755,7 @@ where
 
         // Handle the case where the series start does not fall into the desired frequency and
         // skip over to the next event right away.
-        if start == series.bounds.start && !series.contains_event(start) {
+        if start == series.range.start && !series.contains_event(start) {
             return self.next();
         }
 
@@ -737,9 +775,27 @@ mod tests {
     };
 
     #[test]
+    fn series_range() {
+        let series = Series::new(.., daily(1));
+        assert_eq!(series.start(), DateTime::MIN);
+        assert_eq!(series.end(), DateTime::MAX);
+
+        let start = date(2025, 1, 1).at(0, 0, 0, 0);
+        let end = date(2025, 2, 1).at(0, 0, 0, 0);
+
+        let series = Series::new(start..end, daily(1));
+        assert_eq!(series.start(), start);
+        assert_eq!(series.end(), end);
+
+        let series = Series::new(..=end, daily(1));
+        assert_eq!(series.start(), DateTime::MIN);
+        assert_eq!(series.end(), end + 1.nanosecond());
+    }
+
+    #[test]
     fn daily_series() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2));
+        let series = Series::new(start.., daily(2));
         let events: Vec<_> = series.iter().take(5).collect();
         let expected = vec![
             Event::at(datetime(2025, 1, 1, 1, 1, 1, 0)),
@@ -754,7 +810,7 @@ mod tests {
     #[test]
     fn daily_series_at() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)));
+        let series = Series::new(start.., daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)));
         let events: Vec<_> = series.iter().take(5).collect();
         let expected = vec![
             Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)),
@@ -770,11 +826,7 @@ mod tests {
     fn daily_series_with_end() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 5, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2))
-            .with()
-            .end(end)
-            .build()
-            .unwrap();
+        let series = Series::new(start..end, daily(2)).with().build().unwrap();
         let events: Vec<_> = series.iter().collect();
         let expected = vec![
             Event::at(datetime(2025, 1, 1, 1, 1, 1, 0)),
@@ -787,9 +839,8 @@ mod tests {
     fn daily_series_with_end_and_duration() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 5, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2))
+        let series = Series::new(start..end, daily(2))
             .with()
-            .end(end)
             .event_duration(1.hour())
             .build()
             .unwrap();
@@ -813,7 +864,7 @@ mod tests {
     #[test]
     fn series_contains_event() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)));
+        let series = Series::new(start.., daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)));
         assert!(!series.contains_event(datetime(2025, 1, 1, 1, 1, 1, 0)));
         assert!(series.contains_event(datetime(2025, 1, 1, 2, 2, 2, 2)));
         assert!(series.contains_event(datetime(2025, 1, 1, 3, 3, 3, 3)));
@@ -825,11 +876,10 @@ mod tests {
     fn series_relative_events() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 3, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)))
-            .with()
-            .end(end)
-            .build()
-            .unwrap();
+        let series = Series::new(
+            start..end,
+            daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)),
+        );
         assert_eq!(series.get_event(datetime(2025, 1, 1, 1, 1, 1, 0)), None);
         assert_eq!(
             series.get_event(datetime(2025, 1, 1, 2, 2, 2, 2)),
@@ -856,11 +906,7 @@ mod tests {
     fn series_get_event_containing() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 3, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)))
-            .with()
-            .end(end)
-            .build()
-            .unwrap();
+        let series = Series::new(start..end, daily(2).at(time(2, 2, 2, 2)));
         assert_eq!(
             series.get_event_containing(datetime(2025, 1, 1, 1, 1, 1, 0)),
             None
@@ -874,9 +920,8 @@ mod tests {
             None
         );
 
-        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)))
+        let series = Series::new(start..end, daily(2).at(time(2, 2, 2, 2)))
             .with()
-            .end(end)
             .event_duration(1.hour())
             .build()
             .unwrap();
@@ -913,11 +958,7 @@ mod tests {
     fn series_first_event() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 3, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)))
-            .with()
-            .end(end)
-            .build()
-            .unwrap();
+        let series = Series::new(start..end, daily(2).at(time(2, 2, 2, 2)));
         assert_eq!(
             series.first_event(),
             Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)))
@@ -928,17 +969,13 @@ mod tests {
     fn series_last_event() {
         let start = datetime(2025, 1, 1, 1, 1, 1, 0);
         let end = datetime(2025, 1, 10, 1, 1, 1, 0);
-        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)))
-            .with()
-            .end(end)
-            .build()
-            .unwrap();
+        let series = Series::new(start..end, daily(2).at(time(2, 2, 2, 2)));
         assert_eq!(
             series.last_event(),
             Some(Event::at(datetime(2025, 1, 9, 2, 2, 2, 2)))
         );
 
-        let series = Series::new(start, daily(2).at(time(2, 2, 2, 2)));
+        let series = Series::new(start.., daily(2).at(time(2, 2, 2, 2)));
         assert_eq!(
             series.last_event(),
             Some(Event::at(datetime(9999, 12, 30, 2, 2, 2, 2)))
@@ -948,7 +985,7 @@ mod tests {
     #[test]
     fn series_last_event_unbounded() {
         let start = date(2025, 1, 1).at(1, 1, 1, 0);
-        let series = Series::new(start, hourly(2));
+        let series = Series::new(start.., hourly(2));
         assert_eq!(
             series.last_event(),
             Some(Event::at(date(9999, 12, 31).at(23, 1, 1, 0)))
@@ -958,7 +995,7 @@ mod tests {
     #[test]
     fn series_get_closest_event() {
         let start = datetime(2025, 1, 1, 0, 0, 0, 0);
-        let series = Series::new(start, hourly(1));
+        let series = Series::new(start.., hourly(1));
 
         assert_eq!(
             series.get_closest_event(datetime(2024, 12, 31, 0, 0, 0, 0)),

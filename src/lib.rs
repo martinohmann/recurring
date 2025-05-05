@@ -10,20 +10,20 @@ mod event;
 pub mod repeat;
 mod series;
 
-use core::ops::Range;
+use core::ops::{Bound, Range, RangeBounds};
 
 pub use self::error::Error;
 pub use self::event::Event;
 pub use self::series::{Iter, Series, SeriesWith};
-use jiff::Zoned;
 use jiff::civil::{Date, DateTime, time};
+use jiff::{ToSpan, Zoned};
 
 pub trait Repeat {
     fn next_event(&self, instant: DateTime) -> Option<DateTime>;
 
     fn previous_event(&self, instant: DateTime) -> Option<DateTime>;
 
-    fn closest_event(&self, instant: DateTime, bounds: &Range<DateTime>) -> Option<DateTime>;
+    fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 }
 
 /// A trait for converting values representing points in time into a [`Series`].
@@ -66,7 +66,8 @@ impl ToSeries for Event {
     /// # }
     /// ```
     fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
-        Series::try_new(self.start(), repeat)?
+        self.start()
+            .to_series(repeat)?
             .with()
             .event_duration(self.duration())
             .build()
@@ -97,7 +98,7 @@ impl ToSeries for DateTime {
     /// # }
     /// ```
     fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
-        Series::try_new(*self, repeat)
+        Series::try_new(*self.., repeat)
     }
 }
 
@@ -161,4 +162,32 @@ impl ToSeries for Zoned {
     fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
         self.datetime().to_series(repeat)
     }
+}
+
+/// @TODO(mohmann): replace with `core::ops::IntoBounds` once it's stable.
+trait IntoBounds<T> {
+    fn into_bounds(self) -> (Bound<T>, Bound<T>);
+}
+
+impl<B: RangeBounds<T>, T: Clone> IntoBounds<T> for B {
+    fn into_bounds(self) -> (Bound<T>, Bound<T>) {
+        (self.start_bound().cloned(), self.end_bound().cloned())
+    }
+}
+
+// Tries to simplify arbitrary range bounds into a `Range<DateTime>`.
+fn try_simplify_range<B: RangeBounds<DateTime>>(bounds: B) -> Result<Range<DateTime>, Error> {
+    let start = match bounds.start_bound() {
+        Bound::Unbounded => DateTime::MIN,
+        Bound::Included(start) => *start,
+        Bound::Excluded(start) => start.checked_add(1.nanosecond())?,
+    };
+
+    let end = match bounds.end_bound() {
+        Bound::Unbounded => DateTime::MAX,
+        Bound::Included(end) => end.checked_add(1.nanosecond())?,
+        Bound::Excluded(end) => *end,
+    };
+
+    Ok(Range { start, end })
 }
