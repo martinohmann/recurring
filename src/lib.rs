@@ -10,11 +10,10 @@ mod event;
 pub mod repeat;
 mod series;
 
-use core::ops::{Bound, Range, RangeBounds};
-
 pub use self::error::Error;
 pub use self::event::Event;
 pub use self::series::{Iter, Series, SeriesWith};
+use core::ops::{Bound, Range, RangeBounds};
 use jiff::civil::{Date, DateTime, time};
 use jiff::{ToSpan, Zoned};
 
