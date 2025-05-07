@@ -2,10 +2,12 @@
 
 mod daily;
 mod interval;
+mod timespec;
 mod utils;
 
 pub use self::daily::Daily;
 pub use self::interval::Interval;
+pub use self::timespec::TimeSpec;
 use jiff::{Span, ToSpan};
 
 /// Creates an interval for repeating events.
