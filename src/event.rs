@@ -1,4 +1,5 @@
 use crate::{Error, error::ErrorKind};
+use core::fmt;
 use jiff::{Span, civil::DateTime};
 
 /// Represents an event that happens at a given point in time and may span until an optional end
@@ -186,9 +187,21 @@ impl Event {
     }
 }
 
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.start.fmt(f)?;
+        if let Some(end) = &self.end {
+            f.write_str(" - ")?;
+            end.fmt(f)?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::string::ToString;
     use jiff::civil::date;
 
     #[test]
@@ -196,5 +209,22 @@ mod tests {
         let start = date(2025, 1, 2).at(0, 0, 0, 0);
         let end = date(2025, 1, 1).at(0, 0, 0, 0);
         assert!(Event::new(start, end).is_err());
+    }
+
+    #[test]
+    fn event_display() {
+        assert_eq!(
+            Event::at(date(2025, 1, 1).at(0, 0, 0, 0)).to_string(),
+            "2025-01-01T00:00:00"
+        );
+        assert_eq!(
+            Event::new(
+                date(2025, 1, 1).at(0, 0, 0, 0),
+                date(2025, 1, 1).at(12, 0, 0, 0)
+            )
+            .unwrap()
+            .to_string(),
+            "2025-01-01T00:00:00 - 2025-01-01T12:00:00"
+        );
     }
 }
