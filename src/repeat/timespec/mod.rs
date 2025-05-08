@@ -102,7 +102,7 @@ impl TimeSpec {
 
 impl Repeat for TimeSpec {
     fn next_event(&self, instant: DateTime) -> Option<DateTime> {
-        let mut state = State::new(instant + 1.second());
+        let mut state = State::new(instant.checked_add(1.second()).ok()?);
 
         for year in self.years.range(state.year..=Years::MAX) {
             if year > instant.year() {
@@ -175,7 +175,7 @@ impl Repeat for TimeSpec {
         let initial = if instant.subsec_nanosecond() > 0 {
             instant
         } else {
-            instant - 1.second()
+            instant.checked_sub(1.second()).ok()?
         };
 
         let mut state = State::new(initial);
