@@ -10,6 +10,24 @@ pub use self::interval::Interval;
 pub use self::timespec::TimeSpec;
 use jiff::{Span, ToSpan};
 
+/// Creates a timespec for repeating events.
+///
+/// Unless further methods are called on the returned `TimeSpec`, this will produce events at every
+/// second.
+///
+/// # Example
+///
+/// ```
+/// use jiff::ToSpan;
+/// use recurring::repeat::timespec;
+///
+/// let spec = timespec().second(10);
+/// ```
+#[inline]
+pub fn timespec() -> TimeSpec {
+    TimeSpec::new()
+}
+
 /// Creates an interval for repeating events.
 ///
 /// # Panics

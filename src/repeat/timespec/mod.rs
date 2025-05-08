@@ -22,39 +22,81 @@ impl TimeSpec {
         TimeSpec::default()
     }
 
+    #[must_use]
     pub fn year(mut self, year: i16) -> TimeSpec {
         self.years.insert(year);
         self
     }
 
+    #[must_use]
+    pub fn years<I: IntoIterator<Item = i16>>(self, years: I) -> TimeSpec {
+        years.into_iter().fold(self, TimeSpec::year)
+    }
+
+    #[must_use]
     pub fn month(mut self, month: i8) -> TimeSpec {
         self.months.insert(month);
         self
     }
 
+    #[must_use]
+    pub fn months<I: IntoIterator<Item = i8>>(self, months: I) -> TimeSpec {
+        months.into_iter().fold(self, TimeSpec::month)
+    }
+
+    #[must_use]
     pub fn weekday(mut self, weekday: Weekday) -> TimeSpec {
         self.weekdays.insert(weekday as i8);
         self
     }
 
+    #[must_use]
+    pub fn weekdays<I: IntoIterator<Item = Weekday>>(self, weekdays: I) -> TimeSpec {
+        weekdays.into_iter().fold(self, TimeSpec::weekday)
+    }
+
+    #[must_use]
     pub fn day(mut self, day: i8) -> TimeSpec {
         self.days.insert(day);
         self
     }
 
+    #[must_use]
+    pub fn days<I: IntoIterator<Item = i8>>(self, days: I) -> TimeSpec {
+        days.into_iter().fold(self, TimeSpec::day)
+    }
+
+    #[must_use]
     pub fn hour(mut self, hour: i8) -> TimeSpec {
         self.hours.insert(hour);
         self
     }
 
+    #[must_use]
+    pub fn hours<I: IntoIterator<Item = i8>>(self, hours: I) -> TimeSpec {
+        hours.into_iter().fold(self, TimeSpec::hour)
+    }
+
+    #[must_use]
     pub fn minute(mut self, minute: i8) -> TimeSpec {
         self.minutes.insert(minute);
         self
     }
 
+    #[must_use]
+    pub fn minutes<I: IntoIterator<Item = i8>>(self, minutes: I) -> TimeSpec {
+        minutes.into_iter().fold(self, TimeSpec::minute)
+    }
+
+    #[must_use]
     pub fn second(mut self, second: i8) -> TimeSpec {
         self.seconds.insert(second);
         self
+    }
+
+    #[must_use]
+    pub fn seconds<I: IntoIterator<Item = i8>>(self, seconds: I) -> TimeSpec {
+        seconds.into_iter().fold(self, TimeSpec::second)
     }
 }
 
@@ -335,7 +377,7 @@ mod tests {
 
     #[test]
     fn previous_event() {
-        let ts = TimeSpec::new().minute(3).second(5).second(10);
+        let ts = TimeSpec::new().minute(3).seconds([5, 10]);
 
         assert_eq!(
             ts.previous_event(date(2025, 1, 1).at(0, 3, 5, 0)),
