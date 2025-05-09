@@ -18,9 +18,9 @@ use jiff::civil::{Date, DateTime, time};
 use jiff::{ToSpan, Zoned};
 
 pub trait Repeat {
-    fn next_event(&self, instant: DateTime) -> Option<DateTime>;
+    fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 
-    fn previous_event(&self, instant: DateTime) -> Option<DateTime>;
+    fn previous_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 
     fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 }

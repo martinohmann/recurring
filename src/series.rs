@@ -377,13 +377,8 @@ where
     /// # }
     /// ```
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
-        let closest = self.repeat.closest_event(instant, &self.range)?;
-        if closest > instant {
-            return self.get_event_unchecked(closest);
-        }
-
         self.repeat
-            .next_event(closest)
+            .next_event(instant, &self.range)
             .filter(|next| self.range.contains(next))
             .and_then(|next| self.get_event_unchecked(next))
     }
@@ -423,13 +418,8 @@ where
     /// );
     /// ```
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
-        let closest = self.repeat.closest_event(instant, &self.range)?;
-        if closest < instant {
-            return self.get_event_unchecked(closest);
-        }
-
         self.repeat
-            .previous_event(closest)
+            .previous_event(instant, &self.range)
             .filter(|previous| self.range.contains(previous))
             .and_then(|previous| self.get_event_unchecked(previous))
     }
