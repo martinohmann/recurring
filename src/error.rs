@@ -21,7 +21,9 @@ impl core::fmt::Display for Error {
             ErrorKind::InvalidEventDuration => {
                 f.write_str("event duration must be positive or zero")
             }
-            ErrorKind::InvalidInterval => f.write_str("interval must be positive and non-zero"),
+            ErrorKind::InvalidInterval => {
+                f.write_str("interval must be positive, non-zero and not include sub-second units")
+            }
             ErrorKind::Jiff(err) => err.fmt(f),
         }
     }

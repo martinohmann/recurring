@@ -104,31 +104,8 @@ impl Daily {
         self.at.dedup();
         self
     }
-}
 
-impl Repeat for Daily {
-    fn next_event(&self, instant: DateTime) -> Option<DateTime> {
-        if self.at.is_empty() {
-            return self.interval.next_event(instant);
-        }
-
-        for time in &self.at {
-            let date = instant.with().time(*time).build().ok()?;
-
-            if date > instant {
-                return Some(date);
-            }
-        }
-
-        let next = self.interval.next_event(instant)?;
-        next.with().time(self.at[0]).build().ok()
-    }
-
-    fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
-        if self.at.is_empty() {
-            return self.interval.previous_event(instant);
-        }
-
+    fn get_daily_before(&self, instant: DateTime) -> Option<DateTime> {
         for time in self.at.iter().rev() {
             let date = instant.with().time(*time).build().ok()?;
 
@@ -137,12 +114,59 @@ impl Repeat for Daily {
             }
         }
 
-        let previous = self.interval.previous_event(instant)?;
-        previous
-            .with()
-            .time(self.at[self.at.len() - 1])
-            .build()
-            .ok()
+        None
+    }
+
+    fn get_daily_after(&self, instant: DateTime) -> Option<DateTime> {
+        for time in &self.at {
+            let date = instant.with().time(*time).build().ok()?;
+
+            if date > instant {
+                return Some(date);
+            }
+        }
+
+        None
+    }
+}
+
+impl Repeat for Daily {
+    fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+        if self.at.is_empty() {
+            return self.interval.next_event(instant, range);
+        }
+
+        let closest = self.closest_event(instant, range)?;
+        if closest > instant {
+            return Some(closest);
+        }
+
+        if let Some(after) = self.get_daily_after(instant) {
+            return Some(after);
+        }
+
+        self.interval
+            .next_event(instant, range)
+            .and_then(|next| self.get_daily_after(next))
+    }
+
+    fn previous_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+        if self.at.is_empty() {
+            return self.interval.previous_event(instant, range);
+        }
+
+        let closest = self.closest_event(instant, range)?;
+        if closest < instant {
+            return Some(closest);
+        }
+
+        if let Some(before) = self.get_daily_before(instant) {
+            return Some(before);
+        }
+
+        self.interval
+            .previous_event(instant, range)
+            .and_then(|previous| self.get_daily_before(previous))
     }
 
     fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
