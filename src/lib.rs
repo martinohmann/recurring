@@ -10,12 +10,12 @@ mod event;
 pub mod repeat;
 mod series;
 
-pub use self::error::Error;
-pub use self::event::Event;
-pub use self::series::{Iter, Series, SeriesWith};
 use core::ops::{Bound, Range, RangeBounds};
+pub use error::Error;
+pub use event::Event;
 use jiff::civil::{Date, DateTime, time};
 use jiff::{ToSpan, Zoned};
+pub use series::{Iter, Series, SeriesWith};
 
 pub trait Repeat {
     fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;

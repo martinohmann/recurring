@@ -17,6 +17,7 @@ pub struct TimeSpec {
     seconds: Seconds,
 }
 
+// Builder methods
 impl TimeSpec {
     pub fn new() -> TimeSpec {
         TimeSpec::default()
@@ -100,45 +101,50 @@ impl TimeSpec {
     }
 }
 
-impl Repeat for TimeSpec {
-    fn next_event(&self, instant: DateTime) -> Option<DateTime> {
-        let mut state = State::new(instant.checked_add(1.second()).ok()?);
+// Implementation of finding timespec events.
+impl TimeSpec {
+    fn next_or_current_event(
+        &self,
+        instant: DateTime,
+        range: &Range<DateTime>,
+    ) -> Option<DateTime> {
+        let mut clamp = DateTimeClamp::new(instant);
 
-        for year in self.years.range(state.year..=Years::MAX) {
+        for year in self.years.range(clamp.year..=Years::MAX) {
             if year > instant.year() {
-                state.months_to_min();
+                clamp.months_to_min();
             }
 
-            let month_start = state.month;
+            let month_start = clamp.month;
             if !self.months.contains(month_start) {
-                state.months_to_min();
+                clamp.months_to_min();
             }
 
             for month in self.months.range(month_start..=Months::MAX) {
-                let day_start = state.day;
+                let day_start = clamp.day;
                 if !self.days.contains(day_start) {
-                    state.days_to_min();
+                    clamp.days_to_min();
                 }
 
                 let day_end = days_in_month(month, year);
                 let day_start = day_start.min(day_end);
 
                 'day_loop: for day in self.days.range(day_start..=day_end) {
-                    let hour_start = state.hour;
-                    if !self.hours.contains(state.hour) {
-                        state.hours_to_min();
+                    let hour_start = clamp.hour;
+                    if !self.hours.contains(clamp.hour) {
+                        clamp.hours_to_min();
                     }
 
                     for hour in self.hours.range(hour_start..=Hours::MAX) {
-                        let minute_start = state.minute;
+                        let minute_start = clamp.minute;
                         if !self.minutes.contains(minute_start) {
-                            state.minutes_to_min();
+                            clamp.minutes_to_min();
                         }
 
                         for minute in self.minutes.range(minute_start..=Minutes::MAX) {
-                            let second_start = state.second;
+                            let second_start = clamp.second;
                             if !self.seconds.contains(second_start) {
-                                state.seconds_to_min();
+                                clamp.seconds_to_min();
                             }
 
                             for second in self.seconds.range(second_start..=Seconds::MAX) {
@@ -149,67 +155,68 @@ impl Repeat for TimeSpec {
                                 };
 
                                 if self.weekdays.contains(date.weekday() as i8) {
-                                    return Some(date);
+                                    if range.contains(&date) {
+                                        return Some(date);
+                                    }
+                                    return None;
                                 }
 
                                 continue 'day_loop;
                             }
 
-                            state.minutes_to_min();
+                            clamp.minutes_to_min();
                         }
 
-                        state.hours_to_min();
+                        clamp.hours_to_min();
                     }
 
-                    state.days_to_min();
+                    clamp.days_to_min();
                 }
 
-                state.months_to_min();
+                clamp.months_to_min();
             }
         }
 
         None
     }
 
-    fn previous_event(&self, instant: DateTime) -> Option<DateTime> {
-        let initial = if instant.subsec_nanosecond() > 0 {
-            instant
-        } else {
-            instant.checked_sub(1.second()).ok()?
-        };
+    fn previous_or_current_event(
+        &self,
+        instant: DateTime,
+        range: &Range<DateTime>,
+    ) -> Option<DateTime> {
+        let mut clamp = DateTimeClamp::new(instant);
 
-        let mut state = State::new(initial);
-
-        for year in self.years.range(Years::MIN..=state.year).rev() {
-            let month_end = state.month;
+        for year in self.years.range(Years::MIN..=clamp.year).rev() {
+            let month_end = clamp.month;
             if !self.months.contains(month_end) {
-                state.months_to_max();
+                clamp.months_to_max();
             }
 
             for month in self.months.range(Months::MIN..=month_end).rev() {
-                let day_end = state.day;
+                let day_end = clamp.day;
                 if !self.days.contains(day_end) {
-                    state.days_to_max();
+                    clamp.days_to_max();
                 }
 
                 let day_end = days_in_month(month, year).min(day_end);
 
                 'day_loop: for day in self.days.range(Days::MIN..=day_end).rev() {
-                    let hour_end = state.hour;
-                    if !self.hours.contains(state.hour) {
-                        state.hours_to_max();
+                    let hour_end = clamp.hour;
+                    if !self.hours.contains(clamp.hour) {
+                        clamp.hours_to_max();
                     }
 
                     for hour in self.hours.range(Hours::MIN..=hour_end).rev() {
-                        let minute_end = state.minute;
+                        let minute_end = clamp.minute;
                         if !self.minutes.contains(minute_end) {
-                            state.minutes_to_max();
+                            clamp.minutes_to_max();
                         }
 
                         for minute in self.minutes.range(Minutes::MIN..=minute_end).rev() {
-                            let second_end = state.second;
+                            let second_end = clamp.second;
                             if !self.seconds.contains(second_end) {
-                                state.seconds_to_max();
+                                clamp.seconds_to_max();
                             }
 
                             for second in self.seconds.range(Seconds::MIN..=second_end).rev() {
@@ -220,50 +227,69 @@ impl Repeat for TimeSpec {
                                 };
 
                                 if self.weekdays.contains(date.weekday() as i8) {
-                                    return Some(date);
+                                    if range.contains(&date) {
+                                        return Some(date);
+                                    }
+                                    return None;
                                 }
 
                                 continue 'day_loop;
                             }
 
-                            state.minutes_to_max();
+                            clamp.minutes_to_max();
                         }
 
-                        state.hours_to_max();
+                        clamp.hours_to_max();
                     }
 
-                    state.days_to_max();
+                    clamp.days_to_max();
                 }
 
-                state.months_to_max();
+                clamp.months_to_max();
             }
         }
 
         None
     }
+}
+
+impl Repeat for TimeSpec {
+    fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+        let instant = instant.checked_add(1.second()).ok()?;
+        self.next_or_current_event(instant, range)
+    }
+
+    fn previous_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+        let instant = if instant.subsec_nanosecond() > 0 {
+            instant
+        } else {
+            instant.checked_sub(1.second()).ok()?
+        };
+        self.previous_or_current_event(instant, range)
+    }
 
     fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
-        let previous = self
-            .previous_event(instant)
-            .filter(|previous| range.contains(previous));
-        let next = self.next_event(instant).filter(|next| range.contains(next));
+        let Some(next) = self.next_or_current_event(instant, range) else {
+            return self.previous_event(instant, range);
+        };
 
-        match (previous, next) {
-            (Some(previous), Some(next)) => {
-                if instant.duration_since(previous) < instant.duration_until(next) {
-                    Some(previous)
-                } else {
-                    Some(next)
-                }
-            }
-            (Some(previous), None) => Some(previous),
-            (None, Some(next)) => Some(next),
-            (None, None) => None,
+        if next == instant {
+            return Some(next);
+        }
+
+        let Some(previous) = self.previous_event(instant, range) else {
+            return Some(next);
+        };
+
+        if instant.duration_since(previous) >= instant.duration_until(next) {
+            Some(next)
+        } else {
+            Some(previous)
         }
     }
 }
 
-struct State {
+struct DateTimeClamp {
     year: i16,
     month: i8,
     day: i8,
@@ -272,9 +298,9 @@ struct State {
     second: i8,
 }
 
-impl State {
-    fn new(date: DateTime) -> State {
-        State {
+impl DateTimeClamp {
+    fn new(date: DateTime) -> DateTimeClamp {
+        DateTimeClamp {
             year: date.year(),
             month: date.month(),
             day: date.day(),
@@ -357,41 +383,69 @@ mod tests {
 
     #[test]
     fn next_event() {
+        let range = DateTime::MIN..DateTime::MAX;
         let ts = TimeSpec::new().minute(3).second(5).second(10);
 
         assert_eq!(
-            ts.next_event(date(2025, 1, 1).at(0, 0, 0, 0)),
+            ts.next_event(date(2025, 1, 1).at(0, 0, 0, 0), &range),
             Some(date(2025, 1, 1).at(0, 3, 5, 0))
         );
 
         assert_eq!(
-            ts.next_event(date(2025, 1, 1).at(0, 3, 5, 0)),
+            ts.next_event(date(2025, 1, 1).at(0, 3, 5, 0), &range),
             Some(date(2025, 1, 1).at(0, 3, 10, 0))
         );
 
         assert_eq!(
-            ts.next_event(date(2025, 1, 1).at(0, 3, 10, 0)),
+            ts.next_event(date(2025, 1, 1).at(0, 3, 10, 0), &range),
             Some(date(2025, 1, 1).at(1, 3, 5, 0))
         );
     }
 
     #[test]
     fn previous_event() {
+        let range = DateTime::MIN..DateTime::MAX;
         let ts = TimeSpec::new().minute(3).seconds([5, 10]);
 
         assert_eq!(
-            ts.previous_event(date(2025, 1, 1).at(0, 3, 5, 0)),
+            ts.previous_event(date(2025, 1, 1).at(0, 3, 5, 0), &range),
             Some(date(2024, 12, 31).at(23, 3, 10, 0))
         );
 
         assert_eq!(
-            ts.previous_event(date(2024, 12, 31).at(23, 3, 10, 0)),
+            ts.previous_event(date(2024, 12, 31).at(23, 3, 10, 0), &range),
             Some(date(2024, 12, 31).at(23, 3, 5, 0))
         );
 
         assert_eq!(
-            ts.previous_event(date(2024, 12, 31).at(23, 3, 5, 0)),
+            ts.previous_event(date(2024, 12, 31).at(23, 3, 5, 0), &range),
             Some(date(2024, 12, 31).at(22, 3, 10, 0))
+        );
+    }
+
+    #[test]
+    fn closest_event() {
+        let range = DateTime::MIN..DateTime::MAX;
+        let ts = TimeSpec::new().hour(1).minute(30).second(0);
+
+        assert_eq!(
+            ts.closest_event(date(2025, 1, 1).at(1, 29, 59, 0), &range),
+            Some(date(2025, 1, 1).at(1, 30, 0, 0))
+        );
+
+        assert_eq!(
+            ts.closest_event(date(2025, 1, 1).at(1, 30, 1, 0), &range),
+            Some(date(2025, 1, 1).at(1, 30, 0, 0))
+        );
+
+        assert_eq!(
+            ts.closest_event(date(2025, 1, 1).at(14, 0, 0, 0), &range),
+            Some(date(2025, 1, 2).at(1, 30, 0, 0))
+        );
+
+        assert_eq!(
+            ts.closest_event(date(2025, 1, 1).at(1, 30, 0, 0), &range),
+            Some(date(2025, 1, 1).at(1, 30, 0, 0))
         );
     }
 }
