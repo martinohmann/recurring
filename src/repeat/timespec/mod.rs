@@ -6,6 +6,79 @@ use core::ops::Range;
 use jiff::ToSpan;
 use jiff::civil::{DateTime, Weekday};
 
+/// A time spec implementation similar to the cron pattern.
+///
+/// You can imagine this as some more granular form of the the cron pattern `* * * * *` (at
+/// every minute). `TimeSpec` also includes a 6th component to facilitate second precision.
+///
+/// The default of a time spec is to tick at every second, which would be equivalent to the
+/// second-enhanced cron pattern of `* * * * * *`.
+///
+/// After constructed, this type has various builder methods like [`.second()`][TimeSpec::second]
+/// and [`.hours()`][TimeSpec::hours] to configure the details of the timespec.
+///
+/// # Example: once per day at a certain time
+///
+/// ```
+/// # use recurring::repeat::TimeSpec;
+/// // Every day at 12:30.
+/// let spec = TimeSpec::new().hour(12).minute(30);
+/// ```
+///
+/// # Example: at multiple occasion thoughout the day
+///
+/// ```
+/// # use recurring::repeat::TimeSpec;
+/// // Every day at 12:30, 13:30 and 14:30.
+/// let spec = TimeSpec::new().hours(12..15).minute(30);
+/// ```
+///
+/// # Example: multiple non-consecutive time units
+///
+/// ```
+/// # use recurring::repeat::TimeSpec;
+/// // Every day at 10:30 and 20:30.
+/// let spec = TimeSpec::new().hour(10).hour(20).minute(30);
+/// // Or
+/// let spec = TimeSpec::new().hours([10, 20]).minute(30);
+/// ```
+///
+/// # Example: pitfalls
+///
+/// Because `TimeSpec` behaves pretty much like a cron pattern, the following is expected behaviour
+/// but might not be what you want.
+///
+/// ```
+/// # use recurring::repeat::TimeSpec;
+/// // This ticks at 10:15 and 20:30. But it also ticks at 10:30 and 20:15.
+/// let spec = TimeSpec::new()
+///     .hour(10).minute(15)
+///     .hour(20).minute(30);
+///
+/// // And so does this.
+/// let spec = TimeSpec::new().hours([10, 20]).minutes([15, 30]);
+///
+/// // Let's break it down:
+/// let spec = TimeSpec::new()
+///     .hour(10)    // Tick at hour 10.
+///     .minute(15)  // Tick at minute 15.
+///     .hour(20)    // Tick at hour 20 (we already tick at 10 too).
+///     .minute(30); // Tick at minute 30 (we already tick at 15 too).
+///
+/// // This ticks every day at:
+/// //
+/// // - On hour 10 at minute 15 and 30
+/// // - On hour 20 at minute 15 and 30
+/// ```
+///
+/// # Example: time unit ranges
+///
+/// ```
+/// // This ticks at every hour from 10 to 19 at every minute from 15 to 29 in european summer
+/// // months:
+/// # use recurring::repeat::TimeSpec;
+/// let spec = TimeSpec::new().months(6..=9).hours(10..=20).minutes(15..30);
+/// ```
 #[derive(Debug, Clone, Default)]
 pub struct TimeSpec {
     years: Years,
@@ -19,6 +92,7 @@ pub struct TimeSpec {
 
 // Builder methods
 impl TimeSpec {
+    /// Create a new `TimeSpec` that ticks every second.
     pub fn new() -> TimeSpec {
         TimeSpec::default()
     }
