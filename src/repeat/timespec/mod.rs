@@ -97,78 +97,176 @@ impl TimeSpec {
         TimeSpec::default()
     }
 
+    /// Limit the time spec to a specific year.
+    ///
+    /// This method can be called multiple times to limit the time spec to multiple different
+    /// years. Alternatively, you can use [`.years()`][TimeSpec::years] to feed years from an
+    /// iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when the year is too small or too big. The minimum value is `-9999`. The
+    /// maximum value is `9999`.
     #[must_use]
     pub fn year(mut self, year: i16) -> TimeSpec {
         self.years.insert(year);
         self
     }
 
+    /// Limit the years in the time spec to specific values from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when any of the year values produced by the iterator is year is too small
+    /// or too big. The minimum value is `-9999`. The maximum value is `9999`.
     #[must_use]
     pub fn years<I: IntoIterator<Item = i16>>(self, years: I) -> TimeSpec {
         years.into_iter().fold(self, TimeSpec::year)
     }
 
+    /// Limit the time spec to a specific month.
+    ///
+    /// This method can be called multiple times to limit the time spec to multiple different
+    /// months. Alternatively, you can use [`.months()`][TimeSpec::months] to feed months from an
+    /// iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when the month is too small or too big. The minimum value is `1`. The maximum
+    /// value is `12`.
     #[must_use]
     pub fn month(mut self, month: i8) -> TimeSpec {
         self.months.insert(month);
         self
     }
 
+    /// Limit the months in the time spec to specific values from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when any of the month values produced by the iterator is month is too small
+    /// or too big. The minimum value is `1`. The maximum value is `12`.
     #[must_use]
     pub fn months<I: IntoIterator<Item = i8>>(self, months: I) -> TimeSpec {
         months.into_iter().fold(self, TimeSpec::month)
     }
 
+    /// Limit the time spec to a specific weekday.
+    ///
+    /// This method can be called multiple times to limit the time spec to multiple different
+    /// weekdays. Alternatively, you can use [`.weekdays()`][TimeSpec::weekdays] to feed weekdays
+    /// from an iterator.
     #[must_use]
     pub fn weekday(mut self, weekday: Weekday) -> TimeSpec {
         self.weekdays.insert(weekday.to_monday_one_offset());
         self
     }
 
+    /// Limit the weekdays in the time spec to specific values from an iterator.
     #[must_use]
     pub fn weekdays<I: IntoIterator<Item = Weekday>>(self, weekdays: I) -> TimeSpec {
         weekdays.into_iter().fold(self, TimeSpec::weekday)
     }
 
+    /// Limit the time spec to a specific day.
+    ///
+    /// This method can be called multiple times to limit the time spec to multiple different days.
+    /// Alternatively, you can use [`.days()`][TimeSpec::days] to feed days from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when the day is too small or too big. The minimum value is `1`. The maximum
+    /// value is `31`.
     #[must_use]
     pub fn day(mut self, day: i8) -> TimeSpec {
         self.days.insert(day);
         self
     }
 
+    /// Limit the days in the time spec to specific values from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when any of the day values produced by the iterator is day is too small
+    /// or too big. The minimum value is `1`. The maximum value is `31`.
     #[must_use]
     pub fn days<I: IntoIterator<Item = i8>>(self, days: I) -> TimeSpec {
         days.into_iter().fold(self, TimeSpec::day)
     }
 
+    /// Limit the time spec to a specific hour.
+    ///
+    /// This method can be called multiple times to limit the time spec to multiple different hours.
+    /// Alternatively, you can use [`.hours()`][TimeSpec::hours] to feed hours from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when the hour is too small or too big. The minimum value is `0`. The maximum
+    /// value is `23`.
     #[must_use]
     pub fn hour(mut self, hour: i8) -> TimeSpec {
         self.hours.insert(hour);
         self
     }
 
+    /// Limit the hours in the time spec to specific values from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when any of the hour values produced by the iterator is hour is too small
+    /// or too big. The minimum value is `0`. The maximum value is `23`.
     #[must_use]
     pub fn hours<I: IntoIterator<Item = i8>>(self, hours: I) -> TimeSpec {
         hours.into_iter().fold(self, TimeSpec::hour)
     }
 
+    /// Limit the time spec to a specific minute.
+    ///
+    /// This method can be called multiple times to limit the time spec to multiple different minutes.
+    /// Alternatively, you can use [`.minutes()`][TimeSpec::minutes] to feed minutes from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when the minute is too small or too big. The minimum value is `0`. The maximum
+    /// value is `59`.
     #[must_use]
     pub fn minute(mut self, minute: i8) -> TimeSpec {
         self.minutes.insert(minute);
         self
     }
 
+    /// Limit the minutes in the time spec to specific values from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when any of the minute values produced by the iterator is minute is too small
+    /// or too big. The minimum value is `0`. The maximum value is `59`.
     #[must_use]
     pub fn minutes<I: IntoIterator<Item = i8>>(self, minutes: I) -> TimeSpec {
         minutes.into_iter().fold(self, TimeSpec::minute)
     }
 
+    /// Limit the time spec to a specific second.
+    ///
+    /// This method can be called multiple times to limit the time spec to multiple different seconds.
+    /// Alternatively, you can use [`.seconds()`][TimeSpec::seconds] to feed seconds from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when the second is too small or too big. The minimum value is `0`. The maximum
+    /// value is `59`.
     #[must_use]
     pub fn second(mut self, second: i8) -> TimeSpec {
         self.seconds.insert(second);
         self
     }
 
+    /// Limit the seconds in the time spec to specific values from an iterator.
+    ///
+    /// # Panics
+    ///
+    /// This panics when any of the second values produced by the iterator is second is too small
+    /// or too big. The minimum value is `0`. The maximum value is `59`.
     #[must_use]
     pub fn seconds<I: IntoIterator<Item = i8>>(self, seconds: I) -> TimeSpec {
         seconds.into_iter().fold(self, TimeSpec::second)
