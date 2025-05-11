@@ -2,11 +2,31 @@
 
 mod daily;
 mod interval;
+mod timespec;
 mod utils;
 
-pub use self::daily::Daily;
-pub use self::interval::Interval;
+pub use daily::Daily;
+pub use interval::Interval;
 use jiff::{Span, ToSpan};
+pub use timespec::TimeSpec;
+
+/// Creates a timespec for repeating events.
+///
+/// Unless further methods are called on the returned `TimeSpec`, this will produce events at every
+/// second.
+///
+/// # Example
+///
+/// ```
+/// use jiff::ToSpan;
+/// use recurring::repeat::spec;
+///
+/// let spec = spec().second(10);
+/// ```
+#[inline]
+pub fn spec() -> TimeSpec {
+    TimeSpec::new()
+}
 
 /// Creates an interval for repeating events.
 ///
