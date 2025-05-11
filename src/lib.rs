@@ -15,6 +15,7 @@ pub use error::Error;
 pub use event::Event;
 use jiff::civil::{Date, DateTime, time};
 use jiff::{ToSpan, Zoned};
+use repeat::Composite;
 pub use series::{Iter, Series, SeriesWith};
 
 pub trait Repeat {
@@ -24,6 +25,23 @@ pub trait Repeat {
 
     fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 }
+
+/// A trait for composing values implementing [`Repeat`] into more complex pattern.
+///
+/// This trait is implemented for any type that implements `Repeat`.
+pub trait Compose: Repeat + Sized {
+    /// Compose `Self` with another `Repeat`.
+    ///
+    /// This allows for building more complex repeat pattern.
+    ///
+    /// See the documentation of the [`Composite`] type for more context and examples.
+    #[must_use]
+    fn and<R: Repeat>(self, repeat: R) -> Composite<Self, R> {
+        Composite::new(self, repeat)
+    }
+}
+
+impl<T: Repeat> Compose for T {}
 
 /// A trait for converting values representing points in time into a [`Series`].
 pub trait ToSeries {
