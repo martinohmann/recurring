@@ -1,41 +1,41 @@
 use alloc::collections::btree_set::{self, BTreeSet};
 use core::ops::RangeInclusive;
 
-pub type Weekdays = I8TimeUnit<1, 7>;
-pub type Months = I8TimeUnit<1, 12>;
-pub type Days = I8TimeUnit<1, 31>;
-pub type Hours = I8TimeUnit<0, 23>;
-pub type Minutes = I8TimeUnit<0, 59>;
-pub type Seconds = I8TimeUnit<0, 59>;
+pub(super) type Weekdays = I8TimeUnit<1, 7>;
+pub(super) type Months = I8TimeUnit<1, 12>;
+pub(super) type Days = I8TimeUnit<1, 31>;
+pub(super) type Hours = I8TimeUnit<0, 23>;
+pub(super) type Minutes = I8TimeUnit<0, 59>;
+pub(super) type Seconds = I8TimeUnit<0, 59>;
 
 #[derive(Debug, Clone, Default)]
-pub struct I8TimeUnit<const MIN: i8, const MAX: i8> {
+pub(super) struct I8TimeUnit<const MIN: i8, const MAX: i8> {
     set: BTreeSet<i8>,
 }
 
 impl<const MIN: i8, const MAX: i8> I8TimeUnit<MIN, MAX> {
-    pub const MIN: i8 = MIN;
-    pub const MAX: i8 = MAX;
-
-    pub fn insert(&mut self, value: i8) -> bool {
-        assert!(Self::all().contains(&value));
-        self.set.insert(value)
-    }
+    pub(super) const MIN: i8 = MIN;
+    pub(super) const MAX: i8 = MAX;
 
     #[inline]
-    pub const fn all() -> RangeInclusive<i8> {
+    const fn full_range() -> RangeInclusive<i8> {
         Self::MIN..=Self::MAX
     }
 
-    pub fn contains(&self, second: i8) -> bool {
+    pub(super) fn insert(&mut self, value: i8) -> bool {
+        assert!(Self::full_range().contains(&value));
+        self.set.insert(value)
+    }
+
+    pub(super) fn contains(&self, second: i8) -> bool {
         if self.set.is_empty() {
-            Self::all().contains(&second)
+            Self::full_range().contains(&second)
         } else {
             self.set.contains(&second)
         }
     }
 
-    pub fn range(&self, range: RangeInclusive<i8>) -> I8RangeIter<'_> {
+    pub(super) fn range(&self, range: RangeInclusive<i8>) -> I8RangeIter<'_> {
         if self.set.is_empty() {
             I8RangeIter::Range(range)
         } else {
@@ -44,7 +44,7 @@ impl<const MIN: i8, const MAX: i8> I8TimeUnit<MIN, MAX> {
     }
 }
 
-pub enum I8RangeIter<'a> {
+pub(super) enum I8RangeIter<'a> {
     Range(RangeInclusive<i8>),
     Set(btree_set::Range<'a, i8>),
 }
@@ -70,25 +70,25 @@ impl DoubleEndedIterator for I8RangeIter<'_> {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Years {
+pub(super) struct Years {
     set: BTreeSet<i16>,
 }
 
 impl Years {
-    pub const MIN: i16 = -9999;
-    pub const MAX: i16 = 9999;
-
-    pub fn insert(&mut self, value: i16) -> bool {
-        assert!(Self::all().contains(&value));
-        self.set.insert(value)
-    }
+    pub(super) const MIN: i16 = -9999;
+    pub(super) const MAX: i16 = 9999;
 
     #[inline]
-    pub const fn all() -> RangeInclusive<i16> {
+    const fn full_range() -> RangeInclusive<i16> {
         Self::MIN..=Self::MAX
     }
 
-    pub fn range(&self, range: RangeInclusive<i16>) -> YearRangeIter<'_> {
+    pub(super) fn insert(&mut self, value: i16) -> bool {
+        assert!(Self::full_range().contains(&value));
+        self.set.insert(value)
+    }
+
+    pub(super) fn range(&self, range: RangeInclusive<i16>) -> YearRangeIter<'_> {
         if self.set.is_empty() {
             YearRangeIter::Range(range)
         } else {
@@ -97,7 +97,7 @@ impl Years {
     }
 }
 
-pub enum YearRangeIter<'a> {
+pub(super) enum YearRangeIter<'a> {
     Range(RangeInclusive<i16>),
     Set(btree_set::Range<'a, i16>),
 }
