@@ -1,25 +1,34 @@
 use alloc::collections::btree_set::{self, BTreeSet};
 use core::ops::RangeInclusive;
 
-pub(super) type Weekdays = I8TimeUnit<1, 7>;
-pub(super) type Months = I8TimeUnit<1, 12>;
-pub(super) type Days = I8TimeUnit<1, 31>;
-pub(super) type Hours = I8TimeUnit<0, 23>;
-pub(super) type Minutes = I8TimeUnit<0, 59>;
-pub(super) type Seconds = I8TimeUnit<0, 59>;
+pub(super) type Weekdays = TimeUnits<1, 7>;
+pub(super) type Months = TimeUnits<1, 12>;
+pub(super) type Days = TimeUnits<1, 31>;
+pub(super) type Hours = TimeUnits<0, 23>;
+pub(super) type Minutes = TimeUnits<0, 59>;
+pub(super) type Seconds = TimeUnits<0, 59>;
 
+/// A bounded set of time units.
+///
+/// The `Default` value of this type contains the full range of possible time units between `MIN`
+/// (inclusive) and `MAX` (inclusive).
 #[derive(Debug, Clone, Default)]
-pub(super) struct I8TimeUnit<const MIN: i8, const MAX: i8> {
+pub(super) struct TimeUnits<const MIN: i8, const MAX: i8> {
     set: BTreeSet<i8>,
 }
 
-impl<const MIN: i8, const MAX: i8> I8TimeUnit<MIN, MAX> {
+impl<const MIN: i8, const MAX: i8> TimeUnits<MIN, MAX> {
     pub(super) const MIN: i8 = MIN;
     pub(super) const MAX: i8 = MAX;
 
     #[inline]
     const fn full_range() -> RangeInclusive<i8> {
         Self::MIN..=Self::MAX
+    }
+
+    #[inline]
+    fn clamp_to_bounds(range: RangeInclusive<i8>) -> RangeInclusive<i8> {
+        Self::MIN.max(*range.start())..=Self::MAX.min(*range.end())
     }
 
     pub(super) fn insert(&mut self, value: i8) -> bool {
@@ -35,40 +44,43 @@ impl<const MIN: i8, const MAX: i8> I8TimeUnit<MIN, MAX> {
         }
     }
 
-    pub(super) fn range(&self, range: RangeInclusive<i8>) -> I8RangeIter<'_> {
+    pub(super) fn range(&self, range: RangeInclusive<i8>) -> TimeUnitRange<'_> {
         if self.set.is_empty() {
-            I8RangeIter::Range(range)
+            TimeUnitRange::Range(Self::clamp_to_bounds(range))
         } else {
-            I8RangeIter::Set(self.set.range(range))
+            TimeUnitRange::Set(self.set.range(range))
         }
     }
 }
 
-pub(super) enum I8RangeIter<'a> {
+pub(super) enum TimeUnitRange<'a> {
     Range(RangeInclusive<i8>),
     Set(btree_set::Range<'a, i8>),
 }
 
-impl Iterator for I8RangeIter<'_> {
+impl Iterator for TimeUnitRange<'_> {
     type Item = i8;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            I8RangeIter::Range(range) => range.next(),
-            I8RangeIter::Set(iter) => iter.next().copied(),
+            TimeUnitRange::Range(range) => range.next(),
+            TimeUnitRange::Set(iter) => iter.next().copied(),
         }
     }
 }
 
-impl DoubleEndedIterator for I8RangeIter<'_> {
+impl DoubleEndedIterator for TimeUnitRange<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
-            I8RangeIter::Range(range) => range.next_back(),
-            I8RangeIter::Set(iter) => iter.next_back().copied(),
+            TimeUnitRange::Range(range) => range.next_back(),
+            TimeUnitRange::Set(iter) => iter.next_back().copied(),
         }
     }
 }
 
+/// A bounded set of years.
+///
+/// The `Default` value of this type contains the full range of possible years.
 #[derive(Debug, Clone, Default)]
 pub(super) struct Years {
     set: BTreeSet<i16>,
@@ -83,41 +95,46 @@ impl Years {
         Self::MIN..=Self::MAX
     }
 
+    #[inline]
+    fn clamp_to_bounds(range: RangeInclusive<i16>) -> RangeInclusive<i16> {
+        Self::MIN.max(*range.start())..=Self::MAX.min(*range.end())
+    }
+
     pub(super) fn insert(&mut self, value: i16) -> bool {
         assert!(Self::full_range().contains(&value));
         self.set.insert(value)
     }
 
-    pub(super) fn range(&self, range: RangeInclusive<i16>) -> YearRangeIter<'_> {
+    pub(super) fn range(&self, range: RangeInclusive<i16>) -> YearRange<'_> {
         if self.set.is_empty() {
-            YearRangeIter::Range(range)
+            YearRange::Range(Self::clamp_to_bounds(range))
         } else {
-            YearRangeIter::Set(self.set.range(range))
+            YearRange::Set(self.set.range(range))
         }
     }
 }
 
-pub(super) enum YearRangeIter<'a> {
+pub(super) enum YearRange<'a> {
     Range(RangeInclusive<i16>),
     Set(btree_set::Range<'a, i16>),
 }
 
-impl Iterator for YearRangeIter<'_> {
+impl Iterator for YearRange<'_> {
     type Item = i16;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            YearRangeIter::Range(range) => range.next(),
-            YearRangeIter::Set(iter) => iter.next().copied(),
+            YearRange::Range(range) => range.next(),
+            YearRange::Set(iter) => iter.next().copied(),
         }
     }
 }
 
-impl DoubleEndedIterator for YearRangeIter<'_> {
+impl DoubleEndedIterator for YearRange<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
-            YearRangeIter::Range(range) => range.next_back(),
-            YearRangeIter::Set(iter) => iter.next_back().copied(),
+            YearRange::Range(range) => range.next_back(),
+            YearRange::Set(iter) => iter.next_back().copied(),
         }
     }
 }
