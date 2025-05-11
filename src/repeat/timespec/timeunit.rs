@@ -18,7 +18,7 @@ impl<const MIN: i8, const MAX: i8> I8TimeUnit<MIN, MAX> {
     pub const MAX: i8 = MAX;
 
     pub fn insert(&mut self, value: i8) -> bool {
-        assert!(value >= MIN && value <= MAX);
+        assert!(Self::all().contains(&value));
         self.set.insert(value)
     }
 
@@ -79,7 +79,7 @@ impl Years {
     pub const MAX: i16 = 9999;
 
     pub fn insert(&mut self, value: i16) -> bool {
-        assert!(value >= Self::MIN && value <= Self::MAX);
+        assert!(Self::all().contains(&value));
         self.set.insert(value)
     }
 

@@ -121,7 +121,7 @@ impl TimeSpec {
 
     #[must_use]
     pub fn weekday(mut self, weekday: Weekday) -> TimeSpec {
-        self.weekdays.insert(weekday as i8);
+        self.weekdays.insert(weekday.to_monday_one_offset());
         self
     }
 
@@ -228,7 +228,10 @@ impl TimeSpec {
                                     continue;
                                 };
 
-                                if self.weekdays.contains(date.weekday() as i8) {
+                                if self
+                                    .weekdays
+                                    .contains(date.weekday().to_monday_one_offset())
+                                {
                                     if range.contains(&date) {
                                         return Some(date);
                                     }
@@ -300,7 +303,10 @@ impl TimeSpec {
                                     continue;
                                 };
 
-                                if self.weekdays.contains(date.weekday() as i8) {
+                                if self
+                                    .weekdays
+                                    .contains(date.weekday().to_monday_one_offset())
+                                {
                                     if range.contains(&date) {
                                         return Some(date);
                                     }
