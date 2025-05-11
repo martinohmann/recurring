@@ -1,6 +1,13 @@
+#![allow(dead_code)]
+
 use core::ops::RangeBounds;
 use jiff::civil::DateTime;
 use recurring::{Event, Repeat, Series};
+
+pub fn series_full<B: RangeBounds<DateTime>, R: Repeat>(range: B, repeat: R) -> Vec<Event> {
+    let series = Series::new(range, repeat);
+    series.iter().collect()
+}
 
 pub fn series_take<B: RangeBounds<DateTime>, R: Repeat>(
     range: B,
