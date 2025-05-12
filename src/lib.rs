@@ -15,6 +15,7 @@ pub use error::Error;
 pub use event::Event;
 use jiff::civil::{Date, DateTime, time};
 use jiff::{ToSpan, Zoned};
+use repeat::Combined;
 pub use series::{Iter, Series, SeriesWith};
 
 pub trait Repeat {
@@ -24,6 +25,38 @@ pub trait Repeat {
 
     fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 }
+
+/// A trait for combining values implementing [`Repeat`] into more complex pattern.
+///
+/// This trait is implemented for any type that implements `Repeat`.
+///
+/// # Example
+///
+/// ```
+/// use recurring::Combine;
+/// use recurring::repeat::spec;
+///
+/// let daily_at_noon = spec().hour(12).minute(0).second(0);
+/// let daily_at_midnight = spec().hour(0).minute(0).second(0);
+/// let first_of_month_at_six = spec().day(1).hour(6).minute(0).second(0);
+///
+/// let combined_repeat = daily_at_noon
+///     .and(daily_at_midnight)
+///     .and(first_of_month_at_six);
+/// ```
+pub trait Combine: Repeat + Sized {
+    /// Combine `Self` with another `Repeat`.
+    ///
+    /// This allows for building more complex repeat pattern.
+    ///
+    /// See the documentation of the [`Combine`] trait for usage examples.
+    #[must_use]
+    fn and<R: Repeat>(self, other: R) -> Combined<Self, R> {
+        Combined::new(self, other)
+    }
+}
+
+impl<T: Repeat> Combine for T {}
 
 /// A trait for converting values representing points in time into a [`Series`].
 pub trait ToSeries {

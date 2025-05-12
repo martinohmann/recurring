@@ -447,6 +447,8 @@ impl Repeat for TimeSpec {
     }
 
     fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+        let instant = instant.max(range.start).min(range.end);
+
         let Some(next) = self.next_or_current_event(instant, range) else {
             return self.previous_event(instant, range);
         };
