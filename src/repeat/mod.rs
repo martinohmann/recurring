@@ -1,12 +1,12 @@
 //! Types for specifying repeat intervals.
 
-mod composite;
+mod combined;
 mod daily;
 mod interval;
 mod timespec;
 mod utils;
 
-pub use composite::Composite;
+pub use combined::Combined;
 pub use daily::Daily;
 pub use interval::Interval;
 use jiff::{Span, ToSpan};

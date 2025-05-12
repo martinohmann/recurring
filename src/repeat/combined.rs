@@ -3,29 +3,32 @@ use core::cmp::Ord;
 use core::ops::Range;
 use jiff::civil::DateTime;
 
-/// A composition of two `Repeat` values.
+/// A combination of two `Repeat` values.
 ///
-/// This type is returned by the `.and()` method of the [`Compose`][crate::Compose] and exists to
-/// support building more complex repetition pattern than supported by the individual types from
-/// the [`repeat` module][crate::repeat].
+/// This type is returned by the `.and()` method of the [`Combine`][crate::Combine] trait and
+/// exists to support building more complex repetition pattern than supported by the individual
+/// types from the [`repeat` module][crate::repeat].
 #[derive(Debug, Clone, Default)]
-pub struct Composite<L, R> {
+pub struct Combined<L, R> {
     left: L,
     right: R,
 }
 
-impl<L, R> Composite<L, R>
+impl<L, R> Combined<L, R>
 where
     L: Repeat,
     R: Repeat,
 {
-    /// Create a new `Composite` out of two `Repeat` values.
-    pub fn new(left: L, right: R) -> Composite<L, R> {
-        Composite { left, right }
+    /// Create a new `Combined` from two `Repeat` values.
+    ///
+    /// It's usually more convenient to use the [`.and()`][crate::Combine::and] of the `Combine`
+    /// trait instead of calling this directly.
+    pub fn new(left: L, right: R) -> Combined<L, R> {
+        Combined { left, right }
     }
 }
 
-impl<L, R> Repeat for Composite<L, R>
+impl<L, R> Repeat for Combined<L, R>
 where
     L: Repeat,
     R: Repeat,
@@ -46,7 +49,7 @@ where
         let left = self.left.closest_event(instant, range);
         let right = self.right.closest_event(instant, range);
         either_or(left, right, |left, right| {
-            if left.duration_until(instant).abs() < right.duration_until(instant).abs() {
+            if left.duration_until(instant).abs() <= right.duration_until(instant).abs() {
                 left
             } else {
                 right
@@ -55,8 +58,8 @@ where
     }
 }
 
-/// Returns either `left` or `right` if only one of them is `Some(_)` or `None` if both are `None`.
-/// If both are `Some` returns the result of `or_fn`.
+/// Returns either `left` or `right` if only one of them is `Some(_)`. If both are `Some` returns
+/// the result of `or_fn`, otherwise `None`.
 #[inline]
 fn either_or<F: FnOnce(DateTime, DateTime) -> DateTime>(
     left: Option<DateTime>,

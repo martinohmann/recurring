@@ -3,10 +3,10 @@ mod common;
 use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, date};
 use recurring::repeat::{hourly, spec};
-use recurring::{Compose, Event};
+use recurring::{Combine, Event};
 
 #[test]
-fn composite() {
+fn combined() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = DateTime::MAX;
     let repeat = spec()
