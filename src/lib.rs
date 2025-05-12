@@ -18,11 +18,26 @@ use jiff::{ToSpan, Zoned};
 use repeat::Combined;
 pub use series::{Iter, Series, SeriesWith};
 
+/// A trait for generating repeating events.
 pub trait Repeat {
+    /// Find the next `DateTime` after `instant` within a range.
+    ///
+    /// This must always returns a datetime that is strictly larger than `instant` or `None` if
+    /// the next event would be greater or equal to the range's end. If `instant` happens before
+    /// the range's start, this must return the first event within the range.
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 
+    /// Find the previous `DateTime` before `instant` within a range.
+    ///
+    /// This must always returns a datetime that is strictly smaller than `instant` or `None` if
+    /// the previous event would be less than the range's start. If `instant` happens after
+    /// the range's end, this must return the last event within the range.
     fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 
+    /// Find a `DateTime` closest to `instant` within a range.
+    ///
+    /// The returned datetime may happen before or after `instant`. This must only return `None` if
+    /// there is no event within the range.
     fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 }
 
