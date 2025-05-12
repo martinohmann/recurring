@@ -8,6 +8,9 @@ use jiff::civil::DateTime;
 /// This type is returned by the `.and()` method of the [`Combine`][crate::Combine] trait and
 /// exists to support building more complex repetition pattern than supported by the individual
 /// types from the [`repeat` module][crate::repeat].
+///
+/// See the documentation of the [`Combine`][crate::Combine] trait for usage examples and more
+/// context.
 #[derive(Debug, Clone, Default)]
 pub struct Combined<L, R> {
     left: L,
