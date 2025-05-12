@@ -24,8 +24,8 @@ where
 {
     /// Create a new `Combined` from two `Repeat` values.
     ///
-    /// It's usually more convenient to use the [`.and()`][crate::Combine::and] of the `Combine`
-    /// trait instead of calling this directly.
+    /// Consider using the [`.and()`][crate::Combine::and] method of the `Combine` trait instead
+    /// because it's more convenient.
     pub fn new(left: L, right: R) -> Combined<L, R> {
         Combined { left, right }
     }
