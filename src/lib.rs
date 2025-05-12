@@ -19,11 +19,11 @@ use repeat::Combined;
 pub use series::{Iter, Series, SeriesWith};
 
 pub trait Repeat {
-    fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
+    fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 
-    fn previous_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
+    fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 
-    fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
+    fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 }
 
 /// A trait for combining values implementing [`Repeat`] into more complex pattern.

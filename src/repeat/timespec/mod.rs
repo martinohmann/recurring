@@ -275,7 +275,7 @@ impl TimeSpec {
 
 // Implementation of finding timespec events.
 impl TimeSpec {
-    fn next_or_current_event(
+    fn next_after_or_current(
         &self,
         instant: DateTime,
         range: &Range<DateTime>,
@@ -355,7 +355,7 @@ impl TimeSpec {
         None
     }
 
-    fn previous_or_current_event(
+    fn previous_before_or_current(
         &self,
         instant: DateTime,
         range: &Range<DateTime>,
@@ -432,32 +432,32 @@ impl TimeSpec {
 }
 
 impl Repeat for TimeSpec {
-    fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let instant = instant.checked_add(1.second()).ok()?;
-        self.next_or_current_event(instant, range)
+        self.next_after_or_current(instant, range)
     }
 
-    fn previous_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let instant = if instant.subsec_nanosecond() > 0 {
             instant
         } else {
             instant.checked_sub(1.second()).ok()?
         };
-        self.previous_or_current_event(instant, range)
+        self.previous_before_or_current(instant, range)
     }
 
-    fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let instant = instant.max(range.start).min(range.end);
 
-        let Some(next) = self.next_or_current_event(instant, range) else {
-            return self.previous_event(instant, range);
+        let Some(next) = self.next_after_or_current(instant, range) else {
+            return self.previous_before(instant, range);
         };
 
         if next == instant {
             return Some(next);
         }
 
-        let Some(previous) = self.previous_event(instant, range) else {
+        let Some(previous) = self.previous_before(instant, range) else {
             return Some(next);
         };
 

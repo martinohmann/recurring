@@ -50,7 +50,7 @@ fn combined() {
 }
 
 #[test]
-fn combined_closest_event() {
+fn combined_closest_to() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = date(2025, 12, 31).at(12, 0, 0, 0);
     let range = start..end;
@@ -62,27 +62,27 @@ fn combined_closest_event() {
         .and(hourly(6));
 
     assert_eq!(
-        repeat.closest_event(date(2024, 12, 31).at(0, 0, 0, 0), &range),
+        repeat.closest_to(date(2024, 12, 31).at(0, 0, 0, 0), &range),
         Some(date(2025, 1, 1).at(12, 0, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_event(date(2025, 1, 1).at(12, 0, 0, 0), &range),
+        repeat.closest_to(date(2025, 1, 1).at(12, 0, 0, 0), &range),
         Some(date(2025, 1, 1).at(12, 0, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_event(date(2025, 1, 2).at(8, 14, 59, 0), &range),
+        repeat.closest_to(date(2025, 1, 2).at(8, 14, 59, 0), &range),
         Some(date(2025, 1, 2).at(6, 0, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_event(date(2025, 1, 2).at(8, 15, 0, 0), &range),
+        repeat.closest_to(date(2025, 1, 2).at(8, 15, 0, 0), &range),
         Some(date(2025, 1, 2).at(10, 30, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_event(date(2025, 1, 2).at(8, 15, 1, 0), &range),
+        repeat.closest_to(date(2025, 1, 2).at(8, 15, 1, 0), &range),
         Some(date(2025, 1, 2).at(10, 30, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_event(DateTime::MAX, &range),
+        repeat.closest_to(DateTime::MAX, &range),
         Some(date(2025, 12, 31).at(10, 30, 0, 0)),
     );
 }

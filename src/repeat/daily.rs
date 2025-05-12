@@ -131,12 +131,12 @@ impl Daily {
 }
 
 impl Repeat for Daily {
-    fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
-            return self.interval.next_event(instant, range);
+            return self.interval.next_after(instant, range);
         }
 
-        let closest = self.closest_event(instant, range)?;
+        let closest = self.closest_to(instant, range)?;
         if closest > instant {
             return Some(closest);
         }
@@ -146,16 +146,16 @@ impl Repeat for Daily {
         }
 
         self.interval
-            .next_event(instant, range)
+            .next_after(instant, range)
             .and_then(|next| self.get_daily_after(next))
     }
 
-    fn previous_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
-            return self.interval.previous_event(instant, range);
+            return self.interval.previous_before(instant, range);
         }
 
-        let closest = self.closest_event(instant, range)?;
+        let closest = self.closest_to(instant, range)?;
         if closest < instant {
             return Some(closest);
         }
@@ -165,16 +165,16 @@ impl Repeat for Daily {
         }
 
         self.interval
-            .previous_event(instant, range)
+            .previous_before(instant, range)
             .and_then(|previous| self.get_daily_before(previous))
     }
 
-    fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
-            return self.interval.closest_event(instant, range);
+            return self.interval.closest_to(instant, range);
         }
 
-        let closest = self.interval.closest_event(instant, range)?;
+        let closest = self.interval.closest_to(instant, range)?;
 
         self.at
             .iter()

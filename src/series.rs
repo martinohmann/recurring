@@ -273,7 +273,7 @@ where
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        let closest = self.repeat.closest_event(instant, &self.range)?;
+        let closest = self.repeat.closest_to(instant, &self.range)?;
         if closest == instant {
             return self.get_event_unchecked(instant);
         }
@@ -378,7 +378,7 @@ where
     /// ```
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
         self.repeat
-            .next_event(instant, &self.range)
+            .next_after(instant, &self.range)
             .and_then(|next| self.get_event_unchecked(next))
     }
 
@@ -418,7 +418,7 @@ where
     /// ```
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
         self.repeat
-            .previous_event(instant, &self.range)
+            .previous_before(instant, &self.range)
             .and_then(|previous| self.get_event_unchecked(previous))
     }
 
@@ -456,7 +456,7 @@ where
     /// ```
     pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
         self.repeat
-            .closest_event(instant, &self.range)
+            .closest_to(instant, &self.range)
             .and_then(|closest| self.get_event_unchecked(closest))
     }
 

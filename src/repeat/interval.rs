@@ -83,7 +83,7 @@ impl Interval {
 }
 
 impl Repeat for Interval {
-    fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if instant < range.start {
             // We want the range start if instant happens before that.
             return Some(range.start);
@@ -105,7 +105,7 @@ impl Repeat for Interval {
             .filter(|&event| event < range.end)
     }
 
-    fn previous_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if instant <= range.start {
             return None;
         }
@@ -126,7 +126,7 @@ impl Repeat for Interval {
             .filter(|&event| event >= range.start)
     }
 
-    fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let intervals = intervals_in_range_until(self.span, range, instant)?;
         let mut intervals_rounded = intervals.round();
 
