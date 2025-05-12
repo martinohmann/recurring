@@ -71,8 +71,6 @@ fn either_or<F: FnOnce(DateTime, DateTime) -> DateTime>(
 ) -> Option<DateTime> {
     match (left, right) {
         (Some(left), Some(right)) => Some(or_fn(left, right)),
-        (Some(left), None) => Some(left),
-        (None, Some(right)) => Some(right),
-        (None, None) => None,
+        (left, right) => left.or(right),
     }
 }
