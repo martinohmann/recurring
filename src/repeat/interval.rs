@@ -1,6 +1,7 @@
 use crate::{
     Error, Repeat,
     error::ErrorKind,
+    private,
     repeat::utils::{intervals_in_range_until, is_interval_boundary},
 };
 use core::ops::Range;
@@ -141,6 +142,8 @@ impl Repeat for Interval {
         range.start.checked_add(n * self.span).ok()
     }
 }
+
+impl private::Sealed for Interval {}
 
 impl PartialEq for Interval {
     fn eq(&self, other: &Self) -> bool {

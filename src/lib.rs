@@ -18,8 +18,15 @@ use jiff::{ToSpan, Zoned};
 use repeat::Combined;
 pub use series::{Iter, Series, SeriesWith};
 
+mod private {
+    pub trait Sealed {}
+}
+
 /// A trait for generating repeating events.
-pub trait Repeat {
+///
+/// Since values implementing this trait must uphold some invariants to ensure correctness it is
+/// sealed to prevent implementing it outside of this crate.
+pub trait Repeat: private::Sealed {
     /// Find the next `DateTime` after `instant` within a range.
     ///
     /// This must always returns a datetime that is strictly larger than `instant` or `None` if

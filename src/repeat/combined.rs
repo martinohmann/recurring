@@ -1,4 +1,4 @@
-use crate::Repeat;
+use crate::{Repeat, private};
 use core::cmp::Ord;
 use core::ops::Range;
 use jiff::civil::DateTime;
@@ -60,6 +60,8 @@ where
         })
     }
 }
+
+impl<L, R> private::Sealed for Combined<L, R> {}
 
 /// Returns either `left` or `right` if only one of them is `Some(_)`. If both are `Some` returns
 /// the result of `or_fn`, otherwise `None`.

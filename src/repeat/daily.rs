@@ -1,4 +1,4 @@
-use crate::{Error, Repeat, repeat::Interval};
+use crate::{Error, Repeat, private, repeat::Interval};
 use alloc::vec::Vec;
 use core::ops::Range;
 use jiff::{
@@ -183,3 +183,5 @@ impl Repeat for Daily {
             .min_by_key(|date| date.duration_since(instant).abs())
     }
 }
+
+impl private::Sealed for Daily {}

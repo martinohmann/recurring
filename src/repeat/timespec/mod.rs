@@ -1,7 +1,7 @@
 mod timeunit;
 
 use self::timeunit::{Days, Hours, Minutes, Months, Seconds, Weekdays, Years};
-use crate::Repeat;
+use crate::{Repeat, private};
 use core::ops::Range;
 use jiff::ToSpan;
 use jiff::civil::{DateTime, Weekday};
@@ -468,6 +468,8 @@ impl Repeat for TimeSpec {
         }
     }
 }
+
+impl private::Sealed for TimeSpec {}
 
 struct DateTimeClamp {
     year: i16,
