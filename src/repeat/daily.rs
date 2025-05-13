@@ -1,4 +1,4 @@
-use crate::{Error, Repeat, private, repeat::Interval};
+use crate::{Error, Repeat, private, repeat::Period};
 use alloc::vec::Vec;
 use core::ops::Range;
 use jiff::{
@@ -6,7 +6,7 @@ use jiff::{
     civil::{DateTime, Time},
 };
 
-/// An interval for daily events which may also include fixed times of the day.
+/// A repeat behaviour for daily events which may also include fixed times of the day.
 ///
 /// # Example
 ///
@@ -18,18 +18,18 @@ use jiff::{
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Daily {
-    interval: Interval,
+    period: Period,
     at: Vec<Time>,
 }
 
 impl Daily {
-    /// Creates a new `Daily` from an interval of days.
+    /// Creates a new `Daily` from a period of days.
     ///
     /// For a fallible alternative see [`Daily::try_new`].
     ///
     /// # Panics
     ///
-    /// Panics if `interval` is negative or zero.
+    /// Panics if `period` is negative or zero.
     ///
     /// # Example
     ///
@@ -38,20 +38,20 @@ impl Daily {
     ///
     /// let every_two_days = Daily::new(2);
     /// ```
-    pub fn new<I: ToSpan>(interval: I) -> Daily {
+    pub fn new<I: ToSpan>(period: I) -> Daily {
         Daily {
-            interval: Interval::new(interval.days()),
+            period: Period::new(period.days()),
             at: Vec::new(),
         }
     }
 
-    /// Creates a new `Daily` from an interval of days.
+    /// Creates a new `Daily` from a period of days.
     ///
     /// For an infallible alternative that panics on invalid spans instead see [`Daily::new`].
     ///
     /// # Errors
     ///
-    /// Returns an `Error` if `interval` is negative or zero.
+    /// Returns an `Error` if `period` is negative or zero.
     ///
     /// # Example
     ///
@@ -62,14 +62,14 @@ impl Daily {
     /// assert!(Daily::try_new(0).is_err());
     /// assert!(Daily::try_new(-1).is_err());
     /// ```
-    pub fn try_new<I: ToSpan>(interval: I) -> Result<Daily, Error> {
+    pub fn try_new<I: ToSpan>(period: I) -> Result<Daily, Error> {
         Ok(Daily {
-            interval: Interval::try_new(interval.days())?,
+            period: Period::try_new(period.days())?,
             at: Vec::new(),
         })
     }
 
-    /// Adds a time to the daily repeat interval.
+    /// Adds a time to the daily repeat period.
     ///
     /// # Example
     ///
@@ -86,7 +86,7 @@ impl Daily {
         self.at_times([time])
     }
 
-    /// Adds times to the daily repeat interval.
+    /// Adds times to the daily repeat period.
     ///
     /// # Example
     ///
@@ -133,7 +133,7 @@ impl Daily {
 impl Repeat for Daily {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
-            return self.interval.next_after(instant, range);
+            return self.period.next_after(instant, range);
         }
 
         let closest = self.closest_to(instant, range)?;
@@ -145,14 +145,14 @@ impl Repeat for Daily {
             return Some(after);
         }
 
-        self.interval
+        self.period
             .next_after(instant, range)
             .and_then(|next| self.get_daily_after(next))
     }
 
     fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
-            return self.interval.previous_before(instant, range);
+            return self.period.previous_before(instant, range);
         }
 
         let closest = self.closest_to(instant, range)?;
@@ -164,17 +164,17 @@ impl Repeat for Daily {
             return Some(before);
         }
 
-        self.interval
+        self.period
             .previous_before(instant, range)
             .and_then(|previous| self.get_daily_before(previous))
     }
 
     fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
-            return self.interval.closest_to(instant, range);
+            return self.period.closest_to(instant, range);
         }
 
-        let closest = self.interval.closest_to(instant, range)?;
+        let closest = self.period.closest_to(instant, range)?;
 
         self.at
             .iter()

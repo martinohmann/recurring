@@ -2,30 +2,30 @@ use crate::{
     Error, Repeat,
     error::ErrorKind,
     private,
-    repeat::utils::{intervals_in_range_until, is_interval_boundary},
+    repeat::utils::{is_period_boundary, periods_in_range_until},
 };
 use core::ops::Range;
 use jiff::{Span, civil::DateTime};
 
-/// A precise interval for repeating events.
+/// A precise period for repeating events.
 ///
 /// # Example
 ///
 /// ```
 /// use jiff::ToSpan;
-/// use recurring::repeat::Interval;
+/// use recurring::repeat::Period;
 ///
-/// let every_two_hours = Interval::new(2.hours());
+/// let every_two_hours = Period::new(2.hours());
 /// ```
 #[derive(Debug, Clone)]
-pub struct Interval {
+pub struct Period {
     span: Span,
 }
 
-impl Interval {
-    /// Creates a new `Interval` from a `Span`.
+impl Period {
+    /// Creates a new `Period` from a `Span`.
     ///
-    /// For a fallible alternative see [`Interval::try_new`].
+    /// For a fallible alternative see [`Period::try_new`].
     ///
     /// # Panics
     ///
@@ -35,21 +35,21 @@ impl Interval {
     ///
     /// ```
     /// use jiff::ToSpan;
-    /// use recurring::repeat::Interval;
+    /// use recurring::repeat::Period;
     ///
-    /// let every_two_hours = Interval::new(2.hours());
+    /// let every_two_hours = Period::new(2.hours());
     /// ```
-    pub fn new(span: Span) -> Interval {
+    pub fn new(span: Span) -> Period {
         assert!(
-            Interval::validate(span),
-            "interval must be positive, non-zero and not include sub-second units"
+            Period::validate(span),
+            "period must be positive, non-zero and not include sub-second units"
         );
-        Interval { span }
+        Period { span }
     }
 
-    /// Creates a new `Interval` from a `Span`.
+    /// Creates a new `Period` from a `Span`.
     ///
-    /// For an infallible alternative that panics on invalid spans instead see [`Interval::new`].
+    /// For an infallible alternative that panics on invalid spans instead see [`Period::new`].
     ///
     /// # Errors
     ///
@@ -60,19 +60,19 @@ impl Interval {
     ///
     /// ```
     /// use jiff::ToSpan;
-    /// use recurring::repeat::Interval;
+    /// use recurring::repeat::Period;
     ///
-    /// assert!(Interval::try_new(1.day()).is_ok());
-    /// assert!(Interval::try_new(0.seconds()).is_err());
-    /// assert!(Interval::try_new(-1.day()).is_err());
-    /// assert!(Interval::try_new(1.nanosecond()).is_err());
+    /// assert!(Period::try_new(1.day()).is_ok());
+    /// assert!(Period::try_new(0.seconds()).is_err());
+    /// assert!(Period::try_new(-1.day()).is_err());
+    /// assert!(Period::try_new(1.nanosecond()).is_err());
     /// ```
-    pub fn try_new(span: Span) -> Result<Interval, Error> {
-        if !Interval::validate(span) {
-            return Err(Error::from(ErrorKind::InvalidInterval));
+    pub fn try_new(span: Span) -> Result<Period, Error> {
+        if !Period::validate(span) {
+            return Err(Error::from(ErrorKind::InvalidPeriod));
         }
 
-        Ok(Interval { span })
+        Ok(Period { span })
     }
 
     fn validate(span: Span) -> bool {
@@ -83,22 +83,22 @@ impl Interval {
     }
 }
 
-impl Repeat for Interval {
+impl Repeat for Period {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if instant < range.start {
             // We want the range start if instant happens before that.
             return Some(range.start);
         }
 
-        let mut intervals = intervals_in_range_until(self.span, range, instant)?;
+        let mut periods = periods_in_range_until(self.span, range, instant)?;
 
-        if is_interval_boundary(intervals) {
+        if is_period_boundary(periods) {
             // We want the next event.
-            intervals += 1.0;
+            periods += 1.0;
         }
 
         #[allow(clippy::cast_possible_truncation)] // Already rounded.
-        let n = intervals.ceil() as i64;
+        let n = periods.ceil() as i64;
         range
             .start
             .checked_add(n * self.span)
@@ -111,15 +111,15 @@ impl Repeat for Interval {
             return None;
         }
 
-        let mut intervals = intervals_in_range_until(self.span, range, instant)?;
+        let mut periods = periods_in_range_until(self.span, range, instant)?;
 
-        if is_interval_boundary(intervals) {
+        if is_period_boundary(periods) {
             // We want the previous event.
-            intervals -= 1.0;
+            periods -= 1.0;
         }
 
         #[allow(clippy::cast_possible_truncation)] // Already rounded.
-        let n = intervals.floor() as i64;
+        let n = periods.floor() as i64;
         range
             .start
             .checked_add(n * self.span)
@@ -128,33 +128,33 @@ impl Repeat for Interval {
     }
 
     fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
-        let intervals = intervals_in_range_until(self.span, range, instant)?;
-        let mut intervals_rounded = intervals.round();
+        let periods = periods_in_range_until(self.span, range, instant)?;
+        let mut periods_rounded = periods.round();
 
-        if instant >= range.end && intervals_rounded >= intervals {
+        if instant >= range.end && periods_rounded >= periods {
             // The series would hit the end bound exactly or due to rounding up. We want the last
             // event in the series in this case because the range end is excluded from the series.
-            intervals_rounded -= 1.0;
+            periods_rounded -= 1.0;
         }
 
         #[allow(clippy::cast_possible_truncation)] // Already rounded.
-        let n = intervals_rounded as i64;
+        let n = periods_rounded as i64;
         range.start.checked_add(n * self.span).ok()
     }
 }
 
-impl private::Sealed for Interval {}
+impl private::Sealed for Period {}
 
-impl PartialEq for Interval {
+impl PartialEq for Period {
     fn eq(&self, other: &Self) -> bool {
         self.span.fieldwise() == other.span
     }
 }
 
-impl PartialEq<&Interval> for Interval {
+impl PartialEq<&Period> for Period {
     fn eq(&self, other: &&Self) -> bool {
         self.span.fieldwise() == other.span
     }
 }
 
-impl Eq for Interval {}
+impl Eq for Period {}

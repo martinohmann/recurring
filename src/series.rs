@@ -37,7 +37,7 @@ where
     R: Repeat,
 {
     /// Creates a new `Series` that produces events within the provided `range` according to the
-    /// given `repeat` interval.
+    /// given `repeat` behaviour.
     ///
     /// To configure more aspects of the series call `.with()` on the constructed
     /// `Series` value. See the documentation of [`Series::with`] for more details.
@@ -74,7 +74,7 @@ where
     }
 
     /// Creates a new `Series` that produces events within the provided `range` according to the
-    /// given `repeat` interval.
+    /// given `repeat` behaviour.
     ///
     /// To configure more aspects of the series call `.with()` on the constructed
     /// `Series` value. See the documentation of [`Series::with`] for more details.
@@ -499,7 +499,7 @@ where
 /// - `event_duration`: The [`Span`] of an individual event in the series. This could be minutes,
 ///   hours, days or any other duration the `Span` type supports. If `event_duration` is not set,
 ///   individual events will not have an end datetime and have an effective duration of zero.
-/// - `repeat`: The repeat interval for the series.
+/// - `repeat`: The repeat behaviour for the series.
 #[derive(Debug, Clone)]
 pub struct SeriesWith<R> {
     repeat: R,
@@ -641,7 +641,7 @@ where
         self
     }
 
-    /// Sets the repeat interval for the series.
+    /// Sets the repeat behaviour for the series.
     ///
     /// # Example
     ///

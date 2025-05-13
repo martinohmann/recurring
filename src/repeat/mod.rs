@@ -1,15 +1,15 @@
-//! Types for specifying repeat intervals.
+//! Types for specifying repeat periods.
 
 mod combined;
 mod daily;
-mod interval;
+mod period;
 mod timespec;
 mod utils;
 
 pub use combined::Combined;
 pub use daily::Daily;
-pub use interval::Interval;
 use jiff::{Span, ToSpan};
+pub use period::Period;
 pub use timespec::TimeSpec;
 
 /// Creates a timespec for repeating events.
@@ -30,7 +30,7 @@ pub fn spec() -> TimeSpec {
     TimeSpec::new()
 }
 
-/// Creates an interval for repeating events.
+/// Creates a period for repeating events.
 ///
 /// # Panics
 ///
@@ -40,20 +40,20 @@ pub fn spec() -> TimeSpec {
 ///
 /// ```
 /// use jiff::ToSpan;
-/// use recurring::repeat::interval;
+/// use recurring::repeat::period;
 ///
-/// let every_day_and_a_half = interval(1.day().hours(12));
+/// let every_day_and_a_half = period(1.day().hours(12));
 /// ```
 #[inline]
-pub fn interval(span: Span) -> Interval {
-    Interval::new(span)
+pub fn period(span: Span) -> Period {
+    Period::new(span)
 }
 
-/// Creates an interval for repeating events on a per-second basis.
+/// Creates an period for repeating events on a per-second basis.
 ///
 /// # Panics
 ///
-/// Panics if `interval` is negative or zero.
+/// Panics if `period` is negative or zero.
 ///
 /// # Example
 ///
@@ -63,15 +63,15 @@ pub fn interval(span: Span) -> Interval {
 /// let every_ten_seconds = secondly(10);
 /// ```
 #[inline]
-pub fn secondly<I: ToSpan>(interval: I) -> Interval {
-    Interval::new(interval.seconds())
+pub fn secondly<I: ToSpan>(period: I) -> Period {
+    Period::new(period.seconds())
 }
 
-/// Creates an interval for repeating events on a per-minute basis.
+/// Creates an period for repeating events on a per-minute basis.
 ///
 /// # Panics
 ///
-/// Panics if `interval` is negative or zero.
+/// Panics if `period` is negative or zero.
 ///
 /// # Example
 ///
@@ -81,15 +81,15 @@ pub fn secondly<I: ToSpan>(interval: I) -> Interval {
 /// let every_thirty_minutes = minutely(30);
 /// ```
 #[inline]
-pub fn minutely<I: ToSpan>(interval: I) -> Interval {
-    Interval::new(interval.minutes())
+pub fn minutely<I: ToSpan>(period: I) -> Period {
+    Period::new(period.minutes())
 }
 
-/// Creates an interval for repeating events on a hourly basis.
+/// Creates an period for repeating events on a hourly basis.
 ///
 /// # Panics
 ///
-/// Panics if `interval` is negative or zero.
+/// Panics if `period` is negative or zero.
 ///
 /// # Example
 ///
@@ -99,15 +99,15 @@ pub fn minutely<I: ToSpan>(interval: I) -> Interval {
 /// let every_twelve_hours = hourly(12);
 /// ```
 #[inline]
-pub fn hourly<I: ToSpan>(interval: I) -> Interval {
-    Interval::new(interval.hours())
+pub fn hourly<I: ToSpan>(period: I) -> Period {
+    Period::new(period.hours())
 }
 
-/// Creates an interval for repeating events on a daily basis.
+/// Creates an period for repeating events on a daily basis.
 ///
 /// # Panics
 ///
-/// Panics if `interval` is negative or zero.
+/// Panics if `period` is negative or zero.
 ///
 /// # Example
 ///
@@ -117,15 +117,15 @@ pub fn hourly<I: ToSpan>(interval: I) -> Interval {
 /// let every_two_days = daily(2);
 /// ```
 #[inline]
-pub fn daily<I: ToSpan>(interval: I) -> Daily {
-    Daily::new(interval)
+pub fn daily<I: ToSpan>(period: I) -> Daily {
+    Daily::new(period)
 }
 
-/// Creates an interval for repeating events on a monthly basis.
+/// Creates an period for repeating events on a monthly basis.
 ///
 /// # Panics
 ///
-/// Panics if `interval` is negative or zero.
+/// Panics if `period` is negative or zero.
 ///
 /// # Example
 ///
@@ -135,15 +135,15 @@ pub fn daily<I: ToSpan>(interval: I) -> Daily {
 /// let every_three_months = monthly(3);
 /// ```
 #[inline]
-pub fn monthly<I: ToSpan>(interval: I) -> Interval {
-    Interval::new(interval.months())
+pub fn monthly<I: ToSpan>(period: I) -> Period {
+    Period::new(period.months())
 }
 
-/// Creates an interval for repeating events on a yearly basis.
+/// Creates an period for repeating events on a yearly basis.
 ///
 /// # Panics
 ///
-/// Panics if `interval` is negative or zero.
+/// Panics if `period` is negative or zero.
 ///
 /// # Example
 ///
@@ -153,6 +153,6 @@ pub fn monthly<I: ToSpan>(interval: I) -> Interval {
 /// let every_five_years = yearly(5);
 /// ```
 #[inline]
-pub fn yearly<I: ToSpan>(interval: I) -> Interval {
-    Interval::new(interval.years())
+pub fn yearly<I: ToSpan>(period: I) -> Period {
+    Period::new(period.years())
 }

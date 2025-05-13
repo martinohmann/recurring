@@ -88,7 +88,7 @@ impl<T: Repeat> Combine for T {}
 
 /// A trait for converting values representing points in time into a [`Series`].
 pub trait ToSeries {
-    /// Converts a value to a [`Series`] with the given [`Repeat`] interval.
+    /// Converts a value to a [`Series`] with the given [`Repeat`] behaviour.
     ///
     /// # Errors
     ///
@@ -97,7 +97,7 @@ pub trait ToSeries {
 }
 
 impl ToSeries for Event {
-    /// Converts an `Event` to a `Series` with the given [`Repeat`] interval.
+    /// Converts an `Event` to a `Series` with the given [`Repeat`] behaviour.
     ///
     /// # Errors
     ///
@@ -135,7 +135,7 @@ impl ToSeries for Event {
 }
 
 impl ToSeries for DateTime {
-    /// Converts a `DateTime` to a `Series` with the given [`Repeat`] interval.
+    /// Converts a `DateTime` to a `Series` with the given [`Repeat`] behaviour.
     ///
     /// # Errors
     ///
@@ -163,7 +163,7 @@ impl ToSeries for DateTime {
 }
 
 impl ToSeries for Date {
-    /// Converts a `Date` to a `Series` with the given [`Repeat`] interval.
+    /// Converts a `Date` to a `Series` with the given [`Repeat`] behaviour.
     ///
     /// The resulting series always starts at midnight on the date `to_series` is called on.
     ///
@@ -193,7 +193,7 @@ impl ToSeries for Date {
 }
 
 impl ToSeries for Zoned {
-    /// Converts a `Date` to a `Series` with the given [`Repeat`] interval.
+    /// Converts a `Date` to a `Series` with the given [`Repeat`] behaviour.
     ///
     /// The resulting series always starts at midnight on the date `to_series` is called on.
     ///

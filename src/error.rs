@@ -21,8 +21,8 @@ impl core::fmt::Display for Error {
             ErrorKind::InvalidEventDuration => {
                 f.write_str("event duration must be positive or zero")
             }
-            ErrorKind::InvalidInterval => {
-                f.write_str("interval must be positive, non-zero and not include sub-second units")
+            ErrorKind::InvalidPeriod => {
+                f.write_str("period must be positive, non-zero and not include sub-second units")
             }
             ErrorKind::Jiff(err) => err.fmt(f),
         }
@@ -52,7 +52,7 @@ impl From<ErrorKind> for Error {
 #[derive(Clone, Debug)]
 pub(crate) enum ErrorKind {
     InvalidEventDuration,
-    InvalidInterval,
+    InvalidPeriod,
     InvalidBounds,
     Jiff(jiff::Error),
 }

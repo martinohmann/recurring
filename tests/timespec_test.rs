@@ -164,10 +164,10 @@ fn timespec_closest_to() {
 #[test]
 fn timespec_closest_to_datetime_max() {
     let range = DateTime::MIN..DateTime::MAX;
-    let interval = TimeSpec::new().hour(1).minute(30).second(0);
+    let ts = TimeSpec::new().hour(1).minute(30).second(0);
 
     assert_eq!(
-        interval.closest_to(DateTime::MAX, &range),
+        ts.closest_to(DateTime::MAX, &range),
         Some(date(9999, 12, 31).at(1, 30, 0, 0))
     );
 }

@@ -4,24 +4,24 @@ use jiff::{Span, SpanTotal, Unit, civil::DateTime};
 // Precision tolerance for float division errors.
 const PRECISION_TOLERANCE: f64 = 0.000_001;
 
-// Returns true if the intervals have a .0 fraction or are very close to it.
+// Returns true if the periods have a .0 fraction or are very close to it.
 //
 // This handles precision errors caused by float division.
 #[inline]
-pub(super) fn is_interval_boundary(intervals: f64) -> bool {
-    intervals.fract() < PRECISION_TOLERANCE
+pub(super) fn is_period_boundary(periods: f64) -> bool {
+    periods.fract() < PRECISION_TOLERANCE
 }
 
-// Calculates the number of `interval`s from the range's start until `instant`.
+// Calculates the number of `period`s from the range's start until `instant`.
 #[inline]
-pub(super) fn intervals_in_range_until(
+pub(super) fn periods_in_range_until(
     span: Span,
     range: &Range<DateTime>,
     instant: DateTime,
 ) -> Option<f64> {
-    let interval_seconds = span_seconds(span)?;
+    let period_seconds = span_seconds(span)?;
     let end = instant.max(range.start).min(range.end);
-    seconds_until(range.start, end).map(|seconds| seconds / interval_seconds)
+    seconds_until(range.start, end).map(|seconds| seconds / period_seconds)
 }
 
 #[inline]
