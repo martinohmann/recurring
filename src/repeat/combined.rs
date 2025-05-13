@@ -1,4 +1,4 @@
-use crate::Repeat;
+use crate::{Repeat, private};
 use core::cmp::Ord;
 use core::ops::Range;
 use jiff::civil::DateTime;
@@ -36,21 +36,21 @@ where
     L: Repeat,
     R: Repeat,
 {
-    fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
-        let left = self.left.next_event(instant, range);
-        let right = self.right.next_event(instant, range);
+    fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+        let left = self.left.next_after(instant, range);
+        let right = self.right.next_after(instant, range);
         either_or(left, right, Ord::min)
     }
 
-    fn previous_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
-        let left = self.left.previous_event(instant, range);
-        let right = self.right.previous_event(instant, range);
+    fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+        let left = self.left.previous_before(instant, range);
+        let right = self.right.previous_before(instant, range);
         either_or(left, right, Ord::max)
     }
 
-    fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
-        let left = self.left.closest_event(instant, range);
-        let right = self.right.closest_event(instant, range);
+    fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+        let left = self.left.closest_to(instant, range);
+        let right = self.right.closest_to(instant, range);
         either_or(left, right, |left, right| {
             if left.duration_until(instant).abs() <= right.duration_until(instant).abs() {
                 left
@@ -60,6 +60,8 @@ where
         })
     }
 }
+
+impl<L, R> private::Sealed for Combined<L, R> {}
 
 /// Returns either `left` or `right` if only one of them is `Some(_)`. If both are `Some` returns
 /// the result of `or_fn`, otherwise `None`.

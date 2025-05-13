@@ -94,80 +94,80 @@ fn timespec_weekdays() {
 }
 
 #[test]
-fn timespec_next_event() {
+fn timespec_next_after() {
     let range = DateTime::MIN..DateTime::MAX;
     let ts = TimeSpec::new().minute(3).second(5).second(10);
 
     assert_eq!(
-        ts.next_event(date(2025, 1, 1).at(0, 0, 0, 0), &range),
+        ts.next_after(date(2025, 1, 1).at(0, 0, 0, 0), &range),
         Some(date(2025, 1, 1).at(0, 3, 5, 0))
     );
 
     assert_eq!(
-        ts.next_event(date(2025, 1, 1).at(0, 3, 5, 0), &range),
+        ts.next_after(date(2025, 1, 1).at(0, 3, 5, 0), &range),
         Some(date(2025, 1, 1).at(0, 3, 10, 0))
     );
 
     assert_eq!(
-        ts.next_event(date(2025, 1, 1).at(0, 3, 10, 0), &range),
+        ts.next_after(date(2025, 1, 1).at(0, 3, 10, 0), &range),
         Some(date(2025, 1, 1).at(1, 3, 5, 0))
     );
 }
 
 #[test]
-fn timespec_previous_event() {
+fn timespec_previous_before() {
     let range = DateTime::MIN..DateTime::MAX;
     let ts = TimeSpec::new().minute(3).seconds([5, 10]);
 
     assert_eq!(
-        ts.previous_event(date(2025, 1, 1).at(0, 3, 5, 0), &range),
+        ts.previous_before(date(2025, 1, 1).at(0, 3, 5, 0), &range),
         Some(date(2024, 12, 31).at(23, 3, 10, 0))
     );
 
     assert_eq!(
-        ts.previous_event(date(2024, 12, 31).at(23, 3, 10, 0), &range),
+        ts.previous_before(date(2024, 12, 31).at(23, 3, 10, 0), &range),
         Some(date(2024, 12, 31).at(23, 3, 5, 0))
     );
 
     assert_eq!(
-        ts.previous_event(date(2024, 12, 31).at(23, 3, 5, 0), &range),
+        ts.previous_before(date(2024, 12, 31).at(23, 3, 5, 0), &range),
         Some(date(2024, 12, 31).at(22, 3, 10, 0))
     );
 }
 
 #[test]
-fn timespec_closest_event() {
+fn timespec_closest_to() {
     let range = DateTime::MIN..DateTime::MAX;
     let ts = TimeSpec::new().hour(1).minute(30).second(0);
 
     assert_eq!(
-        ts.closest_event(date(2025, 1, 1).at(1, 29, 59, 0), &range),
+        ts.closest_to(date(2025, 1, 1).at(1, 29, 59, 0), &range),
         Some(date(2025, 1, 1).at(1, 30, 0, 0))
     );
 
     assert_eq!(
-        ts.closest_event(date(2025, 1, 1).at(1, 30, 1, 0), &range),
+        ts.closest_to(date(2025, 1, 1).at(1, 30, 1, 0), &range),
         Some(date(2025, 1, 1).at(1, 30, 0, 0))
     );
 
     assert_eq!(
-        ts.closest_event(date(2025, 1, 1).at(14, 0, 0, 0), &range),
+        ts.closest_to(date(2025, 1, 1).at(14, 0, 0, 0), &range),
         Some(date(2025, 1, 2).at(1, 30, 0, 0))
     );
 
     assert_eq!(
-        ts.closest_event(date(2025, 1, 1).at(1, 30, 0, 0), &range),
+        ts.closest_to(date(2025, 1, 1).at(1, 30, 0, 0), &range),
         Some(date(2025, 1, 1).at(1, 30, 0, 0))
     );
 }
 
 #[test]
-fn timespec_closest_event_datetime_max() {
+fn timespec_closest_to_datetime_max() {
     let range = DateTime::MIN..DateTime::MAX;
     let interval = TimeSpec::new().hour(1).minute(30).second(0);
 
     assert_eq!(
-        interval.closest_event(DateTime::MAX, &range),
+        interval.closest_to(DateTime::MAX, &range),
         Some(date(9999, 12, 31).at(1, 30, 0, 0))
     );
 }

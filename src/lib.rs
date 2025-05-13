@@ -18,12 +18,40 @@ use jiff::{ToSpan, Zoned};
 use repeat::Combined;
 pub use series::{Iter, Series, SeriesWith};
 
-pub trait Repeat {
-    fn next_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
+mod private {
+    pub trait Sealed {}
+}
 
-    fn previous_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
+/// A trait for generating repeating events.
+///
+/// Values implementing `Repeat` are passed to [`Series::new`][Series::new] or [`Series::try_new`]
+/// to build a new series of events that can be queried.
+///
+/// Since values implementing this trait must uphold some invariants to ensure correctness it is
+/// sealed to prevent implementing it outside of this crate.
+///
+/// There is usually no need to interact with this trait directly. Use the functionality provided
+/// by [`Series`] instead because it is more convenient.
+pub trait Repeat: private::Sealed {
+    /// Find the next `DateTime` after `instant` within a range.
+    ///
+    /// This must always returns a datetime that is strictly larger than `instant` or `None` if
+    /// the next event would be greater or equal to the range's end. If `instant` happens before
+    /// the range's start, this must return the first event within the range.
+    fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 
-    fn closest_event(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
+    /// Find the previous `DateTime` before `instant` within a range.
+    ///
+    /// This must always returns a datetime that is strictly smaller than `instant` or `None` if
+    /// the previous event would be less than the range's start. If `instant` happens after
+    /// the range's end, this must return the last event within the range.
+    fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
+
+    /// Find a `DateTime` closest to `instant` within a range.
+    ///
+    /// The returned datetime may happen before, after and exactly at `instant`. This must only
+    /// return `None` if there is no event within the range.
+    fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 }
 
 /// A trait for combining values implementing [`Repeat`] into more complex pattern.
