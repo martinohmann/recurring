@@ -24,8 +24,14 @@ mod private {
 
 /// A trait for generating repeating events.
 ///
+/// Values implementing `Repeat` are passed to [`Series::new`][Series::new] or [`Series::try_new`]
+/// to build a new series of events that can be queried.
+///
 /// Since values implementing this trait must uphold some invariants to ensure correctness it is
 /// sealed to prevent implementing it outside of this crate.
+///
+/// There is usually no need to interact with this trait directly. Use the functionality provided
+/// by [`Series`] instead because it is more convenient.
 pub trait Repeat: private::Sealed {
     /// Find the next `DateTime` after `instant` within a range.
     ///
@@ -43,8 +49,8 @@ pub trait Repeat: private::Sealed {
 
     /// Find a `DateTime` closest to `instant` within a range.
     ///
-    /// The returned datetime may happen before or after `instant`. This must only return `None` if
-    /// there is no event within the range.
+    /// The returned datetime may happen before, after and exactly at `instant`. This must only
+    /// return `None` if there is no event within the range.
     fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 }
 
