@@ -1,4 +1,4 @@
-//! Types for specifying repeat intervals.
+//! Patterns for recurring events.
 
 mod combined;
 mod daily;
@@ -12,7 +12,7 @@ pub use interval::Interval;
 use jiff::{Span, ToSpan};
 pub use timespec::TimeSpec;
 
-/// Creates a timespec for repeating events.
+/// Creates a timespec recurrence pattern.
 ///
 /// Unless further methods are called on the returned `TimeSpec`, this will produce events at every
 /// second.
@@ -21,7 +21,7 @@ pub use timespec::TimeSpec;
 ///
 /// ```
 /// use jiff::ToSpan;
-/// use recurring::repeat::spec;
+/// use recurring::pattern::spec;
 ///
 /// let spec = spec().second(10);
 /// ```
@@ -30,7 +30,7 @@ pub fn spec() -> TimeSpec {
     TimeSpec::new()
 }
 
-/// Creates an interval for repeating events.
+/// Creates a recurrence pattern for events recurring on a fixed interval.
 ///
 /// # Panics
 ///
@@ -40,7 +40,7 @@ pub fn spec() -> TimeSpec {
 ///
 /// ```
 /// use jiff::ToSpan;
-/// use recurring::repeat::interval;
+/// use recurring::pattern::interval;
 ///
 /// let every_day_and_a_half = interval(1.day().hours(12));
 /// ```
@@ -49,7 +49,7 @@ pub fn interval(span: Span) -> Interval {
     Interval::new(span)
 }
 
-/// Creates an interval for repeating events on a per-second basis.
+/// Creates a recurrence pattern for events recurring on a per-second interval.
 ///
 /// # Panics
 ///
@@ -58,7 +58,7 @@ pub fn interval(span: Span) -> Interval {
 /// # Example
 ///
 /// ```
-/// use recurring::repeat::secondly;
+/// use recurring::pattern::secondly;
 ///
 /// let every_ten_seconds = secondly(10);
 /// ```
@@ -67,7 +67,7 @@ pub fn secondly<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.seconds())
 }
 
-/// Creates an interval for repeating events on a per-minute basis.
+/// Creates a recurrence pattern for events recurring on a per-minute interval.
 ///
 /// # Panics
 ///
@@ -76,7 +76,7 @@ pub fn secondly<I: ToSpan>(interval: I) -> Interval {
 /// # Example
 ///
 /// ```
-/// use recurring::repeat::minutely;
+/// use recurring::pattern::minutely;
 ///
 /// let every_thirty_minutes = minutely(30);
 /// ```
@@ -85,7 +85,7 @@ pub fn minutely<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.minutes())
 }
 
-/// Creates an interval for repeating events on a hourly basis.
+/// Creates a recurrence pattern for events recurring on an hourly basis.
 ///
 /// # Panics
 ///
@@ -94,7 +94,7 @@ pub fn minutely<I: ToSpan>(interval: I) -> Interval {
 /// # Example
 ///
 /// ```
-/// use recurring::repeat::hourly;
+/// use recurring::pattern::hourly;
 ///
 /// let every_twelve_hours = hourly(12);
 /// ```
@@ -103,7 +103,7 @@ pub fn hourly<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.hours())
 }
 
-/// Creates an interval for repeating events on a daily basis.
+/// Creates a recurrence pattern for events recurring on a daily basis.
 ///
 /// # Panics
 ///
@@ -112,7 +112,7 @@ pub fn hourly<I: ToSpan>(interval: I) -> Interval {
 /// # Example
 ///
 /// ```
-/// use recurring::repeat::daily;
+/// use recurring::pattern::daily;
 ///
 /// let every_two_days = daily(2);
 /// ```
@@ -121,7 +121,7 @@ pub fn daily<I: ToSpan>(interval: I) -> Daily {
     Daily::new(interval)
 }
 
-/// Creates an interval for repeating events on a monthly basis.
+/// Creates a recurrence pattern for events recurring on a monthly basis.
 ///
 /// # Panics
 ///
@@ -130,7 +130,7 @@ pub fn daily<I: ToSpan>(interval: I) -> Daily {
 /// # Example
 ///
 /// ```
-/// use recurring::repeat::monthly;
+/// use recurring::pattern::monthly;
 ///
 /// let every_three_months = monthly(3);
 /// ```
@@ -139,7 +139,7 @@ pub fn monthly<I: ToSpan>(interval: I) -> Interval {
     Interval::new(interval.months())
 }
 
-/// Creates an interval for repeating events on a yearly basis.
+/// Creates a recurrence pattern for events recurring on a yearly basis.
 ///
 /// # Panics
 ///
@@ -148,7 +148,7 @@ pub fn monthly<I: ToSpan>(interval: I) -> Interval {
 /// # Example
 ///
 /// ```
-/// use recurring::repeat::yearly;
+/// use recurring::pattern::yearly;
 ///
 /// let every_five_years = yearly(5);
 /// ```

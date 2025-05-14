@@ -2,7 +2,7 @@ mod common;
 
 use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, Weekday, date};
-use recurring::repeat::{TimeSpec, spec};
+use recurring::pattern::{TimeSpec, spec};
 use recurring::{Event, Pattern};
 
 #[test]
@@ -36,10 +36,10 @@ fn timespec_default() {
 fn timespec_daily_at() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = DateTime::MAX;
-    let repeat = spec().hours(10..12).minute(30).second(0);
+    let pattern = spec().hours(10..12).minute(30).second(0);
 
     assert_eq!(
-        series_take(start..end, repeat.clone(), 5),
+        series_take(start..end, pattern.clone(), 5),
         vec![
             Event::at(date(2025, 1, 2).at(10, 30, 0, 0)),
             Event::at(date(2025, 1, 2).at(11, 30, 0, 0)),
@@ -50,7 +50,7 @@ fn timespec_daily_at() {
     );
 
     assert_eq!(
-        series_take_rev(start..end, repeat, 5),
+        series_take_rev(start..end, pattern, 5),
         vec![
             Event::at(date(9999, 12, 31).at(11, 30, 0, 0)),
             Event::at(date(9999, 12, 31).at(10, 30, 0, 0)),
@@ -64,14 +64,14 @@ fn timespec_daily_at() {
 #[test]
 fn timespec_weekdays() {
     let start = date(2025, 5, 11).at(12, 0, 0, 0);
-    let repeat = spec()
+    let pattern = spec()
         .weekdays([Weekday::Monday, Weekday::Thursday])
         .hour(12)
         .minute(0)
         .second(0);
 
     assert_eq!(
-        series_take(start.., repeat.clone(), 5),
+        series_take(start.., pattern.clone(), 5),
         vec![
             Event::at(date(2025, 5, 12).at(12, 0, 0, 0)),
             Event::at(date(2025, 5, 15).at(12, 0, 0, 0)),
@@ -82,7 +82,7 @@ fn timespec_weekdays() {
     );
 
     assert_eq!(
-        series_take_rev(start.., repeat, 5),
+        series_take_rev(start.., pattern, 5),
         vec![
             Event::at(date(9999, 12, 30).at(12, 0, 0, 0)),
             Event::at(date(9999, 12, 27).at(12, 0, 0, 0)),

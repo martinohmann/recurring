@@ -1,4 +1,5 @@
-use crate::{Error, Pattern, private, repeat::Interval};
+use super::Interval;
+use crate::{Error, Pattern, private};
 use alloc::vec::Vec;
 use core::ops::Range;
 use jiff::{
@@ -6,12 +7,12 @@ use jiff::{
     civil::{DateTime, Time},
 };
 
-/// An interval for daily events which may also include fixed times of the day.
+/// A recurrence pattern for daily events which may also include fixed times of the day.
 ///
 /// # Example
 ///
 /// ```
-/// use recurring::repeat::Daily;
+/// use recurring::pattern::Daily;
 /// use jiff::civil::time;
 ///
 /// let every_two_days_at_twelve = Daily::new(1).at(time(12, 0, 0, 0));
@@ -34,7 +35,7 @@ impl Daily {
     /// # Example
     ///
     /// ```
-    /// use recurring::repeat::Daily;
+    /// use recurring::pattern::Daily;
     ///
     /// let every_two_days = Daily::new(2);
     /// ```
@@ -56,7 +57,7 @@ impl Daily {
     /// # Example
     ///
     /// ```
-    /// use recurring::repeat::Daily;
+    /// use recurring::pattern::Daily;
     ///
     /// assert!(Daily::try_new(1).is_ok());
     /// assert!(Daily::try_new(0).is_err());
@@ -69,12 +70,12 @@ impl Daily {
         })
     }
 
-    /// Adds a time to the daily repeat interval.
+    /// Adds a time to the daily recurrence pattern.
     ///
     /// # Example
     ///
     /// ```
-    /// use recurring::repeat::daily;
+    /// use recurring::pattern::daily;
     /// use jiff::civil::time;
     ///
     /// let every_day_at_twelve = daily(1).at(time(12, 0, 0, 0));
@@ -86,12 +87,12 @@ impl Daily {
         self.at_times([time])
     }
 
-    /// Adds times to the daily repeat interval.
+    /// Adds times to the daily recurrence pattern.
     ///
     /// # Example
     ///
     /// ```
-    /// use recurring::repeat::daily;
+    /// use recurring::pattern::daily;
     /// use jiff::civil::time;
     ///
     /// let every_day_at_midnight_and_twelve = daily(1)

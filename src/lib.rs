@@ -7,7 +7,7 @@ extern crate alloc;
 
 mod error;
 mod event;
-pub mod repeat;
+pub mod pattern;
 mod series;
 
 use core::ops::{Bound, Range, RangeBounds};
@@ -15,23 +15,25 @@ pub use error::Error;
 pub use event::Event;
 use jiff::civil::{Date, DateTime, time};
 use jiff::{ToSpan, Zoned};
-use repeat::Combined;
+use pattern::Combined;
 pub use series::{Iter, Series, SeriesWith};
 
 mod private {
     pub trait Sealed {}
 }
 
-/// A trait for generating repeating events.
+/// A trait for recurrence patterns.
 ///
-/// Values implementing `Repeat` are passed to [`Series::new`][Series::new] or [`Series::try_new`]
-/// to build a new series of events that can be queried.
+/// Values implementing `Pattern` are passed to [`Series::new`][Series::new] or [`Series::try_new`]
+/// to build a new series of recurring events.
 ///
 /// Since values implementing this trait must uphold some invariants to ensure correctness it is
 /// sealed to prevent implementing it outside of this crate.
 ///
 /// There is usually no need to interact with this trait directly. Use the functionality provided
 /// by [`Series`] instead because it is more convenient.
+///
+/// The [`pattern`] module contains implementations of various recurrence patterns.
 pub trait Pattern: private::Sealed {
     /// Find the next `DateTime` after `instant` within a range.
     ///
@@ -54,32 +56,32 @@ pub trait Pattern: private::Sealed {
     fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime>;
 }
 
-/// A trait for combining values implementing [`Repeat`] into more complex pattern.
+/// A trait for combining values implementing [`Pattern`] into more complex recurrence patterns.
 ///
-/// This trait is implemented for any type that implements `Repeat`.
+/// This trait has a blanket implementation for any type implementing `Pattern`.
 ///
 /// # Example
 ///
 /// ```
 /// use recurring::Combine;
-/// use recurring::repeat::spec;
+/// use recurring::pattern::spec;
 ///
 /// let daily_at_noon = spec().hour(12).minute(0).second(0);
 /// let daily_at_midnight = spec().hour(0).minute(0).second(0);
 /// let first_of_month_at_six = spec().day(1).hour(6).minute(0).second(0);
 ///
-/// let combined_repeat = daily_at_noon
+/// let combined = daily_at_noon
 ///     .and(daily_at_midnight)
 ///     .and(first_of_month_at_six);
 /// ```
 pub trait Combine: Pattern + Sized {
-    /// Combine `Self` with another `Repeat`.
+    /// Combine `Self` with another `Pattern`.
     ///
-    /// This allows for building more complex repeat pattern.
+    /// This allows building more complex recurrence patterns.
     ///
     /// See the documentation of the [`Combine`] trait for usage examples.
     #[must_use]
-    fn and<R: Pattern>(self, other: R) -> Combined<Self, R> {
+    fn and<P: Pattern>(self, other: P) -> Combined<Self, P> {
         Combined::new(self, other)
     }
 }
@@ -88,16 +90,16 @@ impl<T: Pattern> Combine for T {}
 
 /// A trait for converting values representing points in time into a [`Series`].
 pub trait ToSeries {
-    /// Converts a value to a [`Series`] with the given [`Repeat`] interval.
+    /// Converts a value to a [`Series`] with the given recurrence [`Pattern`].
     ///
     /// # Errors
     ///
     /// Returns an error if the value cannot be converted into a valid `Series`.
-    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error>;
+    fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error>;
 }
 
 impl ToSeries for Event {
-    /// Converts an `Event` to a `Series` with the given [`Repeat`] interval.
+    /// Converts an `Event` to a `Series` with the given recurrence [`Pattern`].
     ///
     /// # Errors
     ///
@@ -108,7 +110,7 @@ impl ToSeries for Event {
     ///
     /// ```
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use recurring::{Event, ToSeries, repeat::hourly};
+    /// use recurring::{Event, ToSeries, pattern::hourly};
     /// use jiff::civil::date;
     ///
     /// let date = date(2025, 1, 1);
@@ -125,9 +127,9 @@ impl ToSeries for Event {
     /// # Ok(())
     /// # }
     /// ```
-    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error> {
+    fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
         self.start()
-            .to_series(repeat)?
+            .to_series(pattern)?
             .with()
             .event_duration(self.duration())
             .build()
@@ -135,7 +137,7 @@ impl ToSeries for Event {
 }
 
 impl ToSeries for DateTime {
-    /// Converts a `DateTime` to a `Series` with the given [`Repeat`] interval.
+    /// Converts a `DateTime` to a `Series` with the given recurrence [`Pattern`].
     ///
     /// # Errors
     ///
@@ -145,7 +147,7 @@ impl ToSeries for DateTime {
     ///
     /// ```
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use recurring::{Event, ToSeries, repeat::hourly};
+    /// use recurring::{Event, ToSeries, pattern::hourly};
     /// use jiff::civil::datetime;
     ///
     /// let series = datetime(2025, 1, 1, 0, 0, 0, 0).to_series(hourly(2))?;
@@ -157,13 +159,13 @@ impl ToSeries for DateTime {
     /// # Ok(())
     /// # }
     /// ```
-    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error> {
-        Series::try_new(*self.., repeat)
+    fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
+        Series::try_new(*self.., pattern)
     }
 }
 
 impl ToSeries for Date {
-    /// Converts a `Date` to a `Series` with the given [`Repeat`] interval.
+    /// Converts a `Date` to a `Series` with the given recurrence [`Pattern`].
     ///
     /// The resulting series always starts at midnight on the date `to_series` is called on.
     ///
@@ -175,7 +177,7 @@ impl ToSeries for Date {
     ///
     /// ```
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use recurring::{Event, ToSeries, repeat::hourly};
+    /// use recurring::{Event, ToSeries, pattern::hourly};
     /// use jiff::civil::{date, datetime};
     ///
     /// let series = date(2025, 1, 1).to_series(hourly(2))?;
@@ -187,13 +189,13 @@ impl ToSeries for Date {
     /// # Ok(())
     /// # }
     /// ```
-    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error> {
-        self.to_datetime(time(0, 0, 0, 0)).to_series(repeat)
+    fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
+        self.to_datetime(time(0, 0, 0, 0)).to_series(pattern)
     }
 }
 
 impl ToSeries for Zoned {
-    /// Converts a `Date` to a `Series` with the given [`Repeat`] interval.
+    /// Converts a `Date` to a `Series` with the given recurrence [`Pattern`].
     ///
     /// The resulting series always starts at midnight on the date `to_series` is called on.
     ///
@@ -205,7 +207,7 @@ impl ToSeries for Zoned {
     ///
     /// ```
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use recurring::{Event, ToSeries, repeat::hourly};
+    /// use recurring::{Event, ToSeries, pattern::hourly};
     /// use jiff::{Zoned, civil::datetime};
     ///
     /// let zoned: Zoned = "2025-01-01 12:22[Europe/Berlin]".parse()?;
@@ -219,8 +221,8 @@ impl ToSeries for Zoned {
     /// # Ok(())
     /// # }
     /// ```
-    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error> {
-        self.datetime().to_series(repeat)
+    fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
+        self.datetime().to_series(pattern)
     }
 }
 

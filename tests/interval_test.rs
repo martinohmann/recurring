@@ -1,7 +1,7 @@
 use jiff::ToSpan;
 use jiff::civil::{DateTime, date};
 use recurring::Pattern;
-use recurring::repeat::Interval;
+use recurring::pattern::Interval;
 
 #[test]
 fn interval_next_after() {
