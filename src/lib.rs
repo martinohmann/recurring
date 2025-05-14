@@ -10,7 +10,7 @@ mod event;
 pub mod pattern;
 mod series;
 
-use core::ops::{Bound, Range, RangeBounds};
+use core::ops::{Bound, Range, RangeBounds, RangeFrom, RangeInclusive, RangeTo, RangeToInclusive};
 pub use error::Error;
 pub use event::Event;
 use jiff::civil::{Date, DateTime, time};
@@ -225,6 +225,120 @@ impl ToSeries for Zoned {
         self.datetime().to_series(pattern)
     }
 }
+
+macro_rules! impl_range_to_series {
+    ($($(#[doc = $doc:expr])+ $ty:ty,)+) => {
+        $(
+            impl ToSeries for $ty {
+                /// Converts a `
+                #[doc = stringify!($ty)]
+                /// ` to a `Series` with the given recurrence [`Pattern`].
+                ///
+                /// # Example
+                ///
+                $(#[doc = $doc])*
+                fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
+                    Series::try_new(self.clone(), pattern)
+                }
+            }
+        )*
+    };
+}
+
+impl_range_to_series!(
+    /// ```
+    /// use recurring::{Event, ToSeries, pattern::hourly};
+    /// use jiff::civil::date;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let end = date(2025, 1, 1).at(4, 0, 0, 0);
+    /// let series = (start..end).to_series(hourly(2))?;
+    ///
+    /// let mut events = series.iter();
+    ///
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
+    /// assert_eq!(events.next(), None);
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    Range<DateTime>,
+    /// ```
+    /// use recurring::{Event, ToSeries, pattern::hourly};
+    /// use jiff::civil::date;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let series = (start..).to_series(hourly(2))?;
+    ///
+    /// let mut events = series.iter();
+    ///
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    RangeFrom<DateTime>,
+    /// ```
+    /// use recurring::{Event, ToSeries, pattern::hourly};
+    /// use jiff::civil::date;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let end = date(2025, 1, 1).at(4, 0, 0, 0);
+    /// let series = (start..=end).to_series(hourly(2))?;
+    ///
+    /// let mut events = series.iter();
+    ///
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(4, 0, 0, 0))));
+    /// assert_eq!(events.next(), None);
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    RangeInclusive<DateTime>,
+    /// ```
+    /// use recurring::{Event, ToSeries, pattern::hourly};
+    /// use jiff::civil::{DateTime, date};
+    ///
+    /// let end = DateTime::MAX;
+    /// let series = (..end).to_series(hourly(2))?;
+    ///
+    /// let mut events = series.iter();
+    ///
+    /// assert_eq!(events.next(), Some(Event::at(date(-9999, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(-9999, 1, 1).at(2, 0, 0, 0))));
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    RangeTo<DateTime>,
+    /// ```
+    /// use recurring::{Event, ToSeries, pattern::hourly};
+    /// use jiff::civil::date;
+    ///
+    /// let end = date(2025, 1, 1).at(4, 0, 0, 0);
+    /// let series = (..=end).to_series(hourly(2))?;
+    ///
+    /// let mut events = series.iter();
+    ///
+    /// assert_eq!(events.next(), Some(Event::at(date(-9999, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(-9999, 1, 1).at(2, 0, 0, 0))));
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    RangeToInclusive<DateTime>,
+    /// ```
+    /// use recurring::{Event, ToSeries, pattern::hourly};
+    /// use jiff::civil::date;
+    /// use core::ops::Bound;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let end = date(2025, 1, 1).at(4, 0, 0, 0);
+    /// let series = (Bound::Included(start), Bound::Excluded(end)).to_series(hourly(2))?;
+    ///
+    /// let mut events = series.iter();
+    ///
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
+    /// assert_eq!(events.next(), None);
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    (Bound<DateTime>, Bound<DateTime>),
+);
 
 /// @TODO(mohmann): replace with `core::ops::IntoBounds` once it's stable.
 trait IntoBounds<T> {
