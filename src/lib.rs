@@ -63,8 +63,7 @@ pub trait Pattern: private::Sealed {
 /// # Example
 ///
 /// ```
-/// use recurring::Combine;
-/// use recurring::pattern::cron;
+/// use recurring::{Combine, pattern::cron};
 ///
 /// let daily_at_noon = cron().hour(12).minute(0).second(0);
 /// let daily_at_midnight = cron().hour(0).minute(0).second(0);
@@ -109,9 +108,8 @@ impl ToSeries for Event {
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use recurring::{Event, ToSeries, pattern::hourly};
     /// use jiff::civil::date;
+    /// use recurring::{Event, ToSeries, pattern::hourly};
     ///
     /// let date = date(2025, 1, 1);
     /// let start = date.at(0, 0, 0, 0);
@@ -124,8 +122,7 @@ impl ToSeries for Event {
     ///
     /// assert_eq!(events.next(), Some(Event::new(date.at(0, 0, 0, 0), date.at(0, 30, 0, 0))?));
     /// assert_eq!(events.next(), Some(Event::new(date.at(2, 0, 0, 0), date.at(2, 30, 0, 0))?));
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
         self.start()
@@ -146,9 +143,8 @@ impl ToSeries for DateTime {
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use recurring::{Event, ToSeries, pattern::hourly};
     /// use jiff::civil::datetime;
+    /// use recurring::{Event, ToSeries, pattern::hourly};
     ///
     /// let series = datetime(2025, 1, 1, 0, 0, 0, 0).to_series(hourly(2))?;
     ///
@@ -156,8 +152,7 @@ impl ToSeries for DateTime {
     ///
     /// assert_eq!(events.next(), Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0))));
     /// assert_eq!(events.next(), Some(Event::at(datetime(2025, 1, 1, 2, 0, 0, 0))));
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
         Series::try_new(*self.., pattern)
@@ -176,18 +171,16 @@ impl ToSeries for Date {
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::civil::date;
     /// use recurring::{Event, ToSeries, pattern::hourly};
-    /// use jiff::civil::{date, datetime};
     ///
     /// let series = date(2025, 1, 1).to_series(hourly(2))?;
     ///
     /// let mut events = series.iter();
     ///
-    /// assert_eq!(events.next(), Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0))));
-    /// assert_eq!(events.next(), Some(Event::at(datetime(2025, 1, 1, 2, 0, 0, 0))));
-    /// # Ok(())
-    /// # }
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
         self.to_datetime(time(0, 0, 0, 0)).to_series(pattern)
@@ -206,9 +199,8 @@ impl ToSeries for Zoned {
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
+    /// use jiff::{Zoned, civil::date};
     /// use recurring::{Event, ToSeries, pattern::hourly};
-    /// use jiff::{Zoned, civil::datetime};
     ///
     /// let zoned: Zoned = "2025-01-01 12:22[Europe/Berlin]".parse()?;
     ///
@@ -216,10 +208,9 @@ impl ToSeries for Zoned {
     ///
     /// let mut events = series.iter();
     ///
-    /// assert_eq!(events.next(), Some(Event::at(datetime(2025, 1, 1, 12, 22, 0, 0))));
-    /// assert_eq!(events.next(), Some(Event::at(datetime(2025, 1, 1, 14, 22, 0, 0))));
-    /// # Ok(())
-    /// # }
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(12, 22, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(14, 22, 0, 0))));
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
         self.datetime().to_series(pattern)
@@ -247,8 +238,8 @@ macro_rules! impl_range_to_series {
 
 impl_range_to_series!(
     /// ```
-    /// use recurring::{Event, ToSeries, pattern::hourly};
     /// use jiff::civil::date;
+    /// use recurring::{Event, ToSeries, pattern::hourly};
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let end = date(2025, 1, 1).at(4, 0, 0, 0);

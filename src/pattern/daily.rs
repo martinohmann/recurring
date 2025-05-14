@@ -75,8 +75,8 @@ impl Daily {
     /// # Example
     ///
     /// ```
-    /// use recurring::pattern::daily;
     /// use jiff::civil::time;
+    /// use recurring::pattern::daily;
     ///
     /// let every_day_at_twelve = daily(1).at(time(12, 0, 0, 0));
     ///
@@ -92,8 +92,8 @@ impl Daily {
     /// # Example
     ///
     /// ```
-    /// use recurring::pattern::daily;
     /// use jiff::civil::time;
+    /// use recurring::pattern::daily;
     ///
     /// let every_day_at_midnight_and_twelve = daily(1)
     ///     .at_times([time(0, 0, 0, 0), time(12, 0, 0, 0)]);

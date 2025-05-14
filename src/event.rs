@@ -11,10 +11,8 @@ use jiff::{Span, civil::DateTime};
 /// # Example
 ///
 /// ```
-/// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-/// # use recurring::Event;
-/// use jiff::ToSpan;
-/// use jiff::civil::date;
+/// use jiff::{ToSpan, civil::date};
+/// use recurring::Event;
 ///
 /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
 /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
@@ -22,8 +20,7 @@ use jiff::{Span, civil::DateTime};
 /// assert_eq!(event.start(), start);
 /// assert_eq!(event.end(), Some(end));
 /// assert_eq!(event.duration().fieldwise(), 1.day());
-/// # Ok(())
-/// # }
+/// # Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Event {
@@ -39,8 +36,8 @@ impl Event {
     /// # Example
     ///
     /// ```
-    /// # use recurring::Event;
     /// use jiff::civil::date;
+    /// use recurring::Event;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let event = Event::at(start);
@@ -61,15 +58,13 @@ impl Event {
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// # use recurring::Event;
     /// use jiff::civil::date;
+    /// use recurring::Event;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
     /// let event = Event::new(start, end)?;
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn new(start: DateTime, end: DateTime) -> Result<Event, Error> {
         if start >= end {
@@ -87,8 +82,8 @@ impl Event {
     /// # Example
     ///
     /// ```
-    /// # use recurring::Event;
     /// use jiff::civil::date;
+    /// use recurring::Event;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let event = Event::at(start);
@@ -103,9 +98,8 @@ impl Event {
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// # use recurring::Event;
     /// use jiff::civil::date;
+    /// use recurring::Event;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let event = Event::at(start);
@@ -114,8 +108,7 @@ impl Event {
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
     /// let event = Event::new(start, end)?;
     /// assert_eq!(event.end(), Some(end));
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn end(&self) -> Option<DateTime> {
         self.end
@@ -128,10 +121,8 @@ impl Event {
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// # use recurring::Event;
-    /// use jiff::ToSpan;
-    /// use jiff::civil::date;
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::Event;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let event = Event::at(start);
@@ -140,8 +131,7 @@ impl Event {
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
     /// let event = Event::new(start, end)?;
     /// assert_eq!(event.duration().fieldwise(), 1.day());
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn duration(&self) -> Span {
         self.end
@@ -156,10 +146,8 @@ impl Event {
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// # use recurring::Event;
-    /// use jiff::ToSpan;
-    /// use jiff::civil::date;
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::Event;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let event = Event::at(start);
@@ -175,8 +163,7 @@ impl Event {
     /// assert!(event.contains(end - 1.nanosecond()));
     /// assert!(!event.contains(end));
     /// assert!(!event.contains(end + 1.nanosecond()));
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn contains(&self, instant: DateTime) -> bool {
         if let Some(end) = self.end {

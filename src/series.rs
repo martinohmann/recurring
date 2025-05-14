@@ -7,10 +7,8 @@ use jiff::{Span, civil::DateTime};
 /// # Example
 ///
 /// ```
-/// # fn main() -> Result<(), Box<dyn core::error::Error>> {
 /// use jiff::civil::date;
-/// use recurring::{Event, Series};
-/// use recurring::pattern::hourly;
+/// use recurring::{Event, Series, pattern::hourly};
 ///
 /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
 /// let end = date(2025, 1, 1).at(4, 0, 0, 0);
@@ -22,8 +20,7 @@ use jiff::{Span, civil::DateTime};
 /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
 /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
 /// assert_eq!(events.next(), None);
-/// # Ok(())
-/// # }
+/// # Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
 #[derive(Debug, Clone)]
 pub struct Series<P> {
@@ -53,8 +50,7 @@ where
     ///
     /// ```
     /// use jiff::civil::date;
-    /// # use recurring::Series;
-    /// use recurring::pattern::hourly;
+    /// use recurring::{Series, pattern::hourly};
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     /// ```
@@ -89,15 +85,12 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::{DateTime, date};
-    /// # use recurring::Series;
-    /// use recurring::pattern::hourly;
+    /// use recurring::{Series, pattern::hourly};
     ///
     /// assert!(Series::try_new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2)).is_ok());
     /// assert!(Series::try_new(DateTime::MAX.., hourly(2)).is_err());
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn try_new<B: RangeBounds<DateTime>>(range: B, pattern: P) -> Result<Series<P>, Error> {
         let range = try_simplify_range(range)?;
@@ -119,11 +112,8 @@ where
     /// Set an explict end date for the series and configure the duration of the individual events.
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// # use recurring::Series;
-    /// use jiff::ToSpan;
-    /// use jiff::civil::date;
-    /// use recurring::pattern::daily;
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Series, pattern::daily};
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
@@ -131,8 +121,7 @@ where
     ///     .end(date(2025, 2, 1).at(0, 0, 0, 0))
     ///     .event_duration(1.hour())
     ///     .build()?;
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn with(self) -> SeriesWith<P> {
         SeriesWith::new(self)
@@ -176,8 +165,7 @@ where
     ///
     /// ```
     /// use jiff::civil::date;
-    /// use recurring::{Event, Series};
-    /// use recurring::pattern::hourly;
+    /// use recurring::{Event, Series, pattern::hourly};
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
@@ -200,8 +188,7 @@ where
     ///
     /// ```
     /// use jiff::civil::date;
-    /// use recurring::{Event, Series};
-    /// use recurring::pattern::hourly;
+    /// use recurring::{Event, Series, pattern::hourly};
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
@@ -220,10 +207,8 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
-    /// use recurring::{Event, Series};
-    /// use recurring::pattern::hourly;
+    /// use recurring::{Event, Series, pattern::hourly};
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let end = date(2026, 1, 1).at(0, 0, 0, 0);
@@ -231,8 +216,7 @@ where
     /// let series = Series::new(start..end, hourly(2));
     ///
     /// assert_eq!(series.last_event(), Some(Event::at(date(2025, 12, 31).at(22, 0, 0, 0))));
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn last_event(&self) -> Option<Event> {
         self.get_event_before(self.range.end)
@@ -244,8 +228,7 @@ where
     ///
     /// ```
     /// use jiff::civil::date;
-    /// # use recurring::Series;
-    /// use recurring::pattern::hourly;
+    /// use recurring::{Event, Series, pattern::hourly};
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
@@ -264,8 +247,7 @@ where
     ///
     /// ```
     /// use jiff::civil::date;
-    /// use recurring::{Event, Series};
-    /// use recurring::pattern::hourly;
+    /// use recurring::{Event, Series, pattern::hourly};
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
@@ -289,11 +271,8 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use jiff::ToSpan;
-    /// use jiff::civil::{date, DateTime};
-    /// use recurring::{Event, Series};
-    /// use recurring::pattern::hourly;
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Event, Series, pattern::hourly};
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series_end = date(2025, 2, 1).at(0, 0, 0, 0);
@@ -322,8 +301,7 @@ where
     ///     series.get_event_containing(series_end),
     ///     None,
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn get_event_containing(&self, instant: DateTime) -> Option<Event> {
         self.get_event(instant)
@@ -339,11 +317,8 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use jiff::ToSpan;
-    /// use jiff::civil::{date, DateTime};
-    /// use recurring::{Event, Series};
-    /// use recurring::pattern::hourly;
+    /// use jiff::{ToSpan, civil::{date, DateTime}};
+    /// use recurring::{Event, Series, pattern::hourly};
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series_end = date(2025, 2, 1).at(0, 0, 0, 0);
@@ -373,8 +348,7 @@ where
     ///     series.get_event_after(series_end),
     ///     None,
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
         self.pattern
@@ -389,10 +363,8 @@ where
     /// # Example
     ///
     /// ```
-    /// use jiff::ToSpan;
-    /// use jiff::civil::{date, DateTime};
-    /// use recurring::{Event, Series};
-    /// use recurring::pattern::hourly;
+    /// use jiff::{ToSpan, civil::{DateTime, date}};
+    /// use recurring::{Event, Series, pattern::hourly};
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series = Series::new(series_start.., hourly(1));
@@ -429,10 +401,8 @@ where
     /// # Example
     ///
     /// ```
-    /// use jiff::ToSpan;
-    /// use jiff::civil::date;
-    /// use recurring::{Event, Series};
-    /// use recurring::pattern::hourly;
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Event, Series, pattern::hourly};
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series = Series::new(series_start.., hourly(1));
@@ -525,11 +495,8 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use jiff::{ToSpan};
-    /// use jiff::civil::date;
-    /// use recurring::Series;
-    /// use recurring::pattern::daily;
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Series, pattern::daily};
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     ///
@@ -545,8 +512,7 @@ where
     ///
     /// // The since `new_end` is included in the series, it actually ends 1ns after that!
     /// assert_eq!(s2.end(), new_end + 1.nanosecond());
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     #[must_use]
     pub fn range<B: RangeBounds<DateTime>>(mut self, range: B) -> SeriesWith<P> {
@@ -562,10 +528,8 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
-    /// use recurring::Series;
-    /// use recurring::pattern::daily;
+    /// use recurring::{Series, pattern::daily};
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
@@ -574,8 +538,7 @@ where
     /// let s2 = s1.with().start(start).build()?;
     ///
     /// assert_eq!(s2.start(), start);
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     #[must_use]
     pub fn start(mut self, start: DateTime) -> SeriesWith<P> {
@@ -592,10 +555,8 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
-    /// use recurring::Series;
-    /// use recurring::pattern::daily;
+    /// use recurring::{Series, pattern::daily};
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
@@ -604,8 +565,7 @@ where
     /// let s2 = s1.with().end(end).build()?;
     ///
     /// assert_eq!(s2.end(), end);
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     #[must_use]
     pub fn end(mut self, end: DateTime) -> SeriesWith<P> {
@@ -621,19 +581,15 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use jiff::ToSpan;
-    /// use jiff::civil::date;
-    /// use recurring::Series;
-    /// use recurring::pattern::daily;
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Series, pattern::daily};
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
     /// let s2 = s1.with().event_duration(1.hour()).build()?;
     ///
     /// assert_eq!(s2.event_duration().fieldwise(), 1.hour());
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     #[must_use]
     pub fn event_duration(mut self, event_duration: Span) -> SeriesWith<P> {
@@ -646,19 +602,15 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// use jiff::ToSpan;
-    /// use jiff::civil::date;
-    /// use recurring::Series;
-    /// use recurring::pattern::daily;
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Series, pattern::daily};
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
     /// let s2 = s1.with().pattern(daily(2)).build()?;
     ///
     /// assert_eq!(s2.pattern(), &daily(2));
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     #[must_use]
     pub fn pattern<Q: Pattern>(self, pattern: Q) -> SeriesWith<Q> {
@@ -679,18 +631,15 @@ where
     /// # Example
     ///
     /// ```
-    /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
-    /// # use recurring::Series;
-    /// use jiff::civil::date;
-    /// use recurring::pattern::daily;
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Series, pattern::daily};
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
     /// let s2 = s1.with()
     ///     .end(date(2025, 1, 3).at(0, 0, 0, 0))
     ///     .build()?;
-    /// # Ok(())
-    /// # }
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn build(self) -> Result<Series<P>, Error> {
         let range = try_simplify_range(self.bounds)?;
