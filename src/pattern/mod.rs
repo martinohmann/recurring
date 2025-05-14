@@ -1,33 +1,34 @@
 //! Patterns for recurring events.
 
 mod combined;
+mod cron;
 mod daily;
 mod interval;
-mod timespec;
+mod timeunit;
 mod utils;
 
 pub use combined::Combined;
+pub use cron::Cron;
 pub use daily::Daily;
 pub use interval::Interval;
 use jiff::{Span, ToSpan};
-pub use timespec::TimeSpec;
 
-/// Creates a timespec recurrence pattern.
+/// Creates a cron recurrence pattern.
 ///
-/// Unless further methods are called on the returned `TimeSpec`, this will produce events at every
+/// Unless further methods are called on the returned `Cron`, this will produce events at every
 /// second.
 ///
 /// # Example
 ///
 /// ```
 /// use jiff::ToSpan;
-/// use recurring::pattern::spec;
+/// use recurring::pattern::cron;
 ///
-/// let spec = spec().second(10);
+/// let pattern = cron().second(10);
 /// ```
 #[inline]
-pub fn spec() -> TimeSpec {
-    TimeSpec::new()
+pub fn cron() -> Cron {
+    Cron::new()
 }
 
 /// Creates a recurrence pattern for events recurring on a fixed interval.
