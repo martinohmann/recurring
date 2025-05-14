@@ -1,4 +1,4 @@
-use crate::{Error, Event, IntoBounds, Repeat, error::ErrorKind, try_simplify_range};
+use crate::{Error, Event, IntoBounds, Pattern, error::ErrorKind, try_simplify_range};
 use core::ops::{Bound, Range, RangeBounds};
 use jiff::{Span, civil::DateTime};
 
@@ -10,7 +10,7 @@ use jiff::{Span, civil::DateTime};
 /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
 /// use jiff::civil::date;
 /// use recurring::{Event, Series};
-/// use recurring::repeat::hourly;
+/// use recurring::pattern::hourly;
 ///
 /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
 /// let end = date(2025, 1, 1).at(4, 0, 0, 0);
@@ -26,18 +26,18 @@ use jiff::{Span, civil::DateTime};
 /// # }
 /// ```
 #[derive(Debug, Clone)]
-pub struct Series<R> {
-    repeat: R,
+pub struct Series<P> {
+    pattern: P,
     range: Range<DateTime>,
     event_duration: Span,
 }
 
-impl<R> Series<R>
+impl<P> Series<P>
 where
-    R: Repeat,
+    P: Pattern,
 {
     /// Creates a new `Series` that produces events within the provided `range` according to the
-    /// given `repeat` interval.
+    /// given recurrence [`Pattern`].
     ///
     /// To configure more aspects of the series call `.with()` on the constructed
     /// `Series` value. See the documentation of [`Series::with`] for more details.
@@ -54,11 +54,11 @@ where
     /// ```
     /// use jiff::civil::date;
     /// # use recurring::Series;
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     /// ```
-    pub fn new<B: RangeBounds<DateTime>>(range: B, repeat: R) -> Series<R> {
+    pub fn new<B: RangeBounds<DateTime>>(range: B, pattern: P) -> Series<P> {
         let range = try_simplify_range(range).expect("range overflows DateTime::MAX");
 
         assert!(
@@ -67,14 +67,14 @@ where
         );
 
         Series {
-            repeat,
+            pattern,
             range,
             event_duration: Span::new(),
         }
     }
 
     /// Creates a new `Series` that produces events within the provided `range` according to the
-    /// given `repeat` interval.
+    /// given recurrence [`Pattern`].
     ///
     /// To configure more aspects of the series call `.with()` on the constructed
     /// `Series` value. See the documentation of [`Series::with`] for more details.
@@ -92,21 +92,21 @@ where
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::{DateTime, date};
     /// # use recurring::Series;
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// assert!(Series::try_new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2)).is_ok());
     /// assert!(Series::try_new(DateTime::MAX.., hourly(2)).is_err());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn try_new<B: RangeBounds<DateTime>>(range: B, repeat: R) -> Result<Series<R>, Error> {
+    pub fn try_new<B: RangeBounds<DateTime>>(range: B, pattern: P) -> Result<Series<P>, Error> {
         let range = try_simplify_range(range)?;
         if range.start >= range.end {
             return Err(Error::from(ErrorKind::InvalidBounds));
         }
 
         Ok(Series {
-            repeat,
+            pattern,
             range,
             event_duration: Span::new(),
         })
@@ -123,7 +123,7 @@ where
     /// # use recurring::Series;
     /// use jiff::ToSpan;
     /// use jiff::civil::date;
-    /// use recurring::repeat::daily;
+    /// use recurring::pattern::daily;
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
@@ -134,7 +134,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn with(self) -> SeriesWith<R> {
+    pub fn with(self) -> SeriesWith<P> {
         SeriesWith::new(self)
     }
 
@@ -165,9 +165,9 @@ where
         self.event_duration
     }
 
-    /// Returns a reference to the `Repeat` used by the series to generate events.
-    pub fn repeat(&self) -> &R {
-        &self.repeat
+    /// Returns a reference to the recurrence pattern used by the series.
+    pub fn pattern(&self) -> &P {
+        &self.pattern
     }
 
     /// Creates an iterator over the events in a the series.
@@ -177,7 +177,7 @@ where
     /// ```
     /// use jiff::civil::date;
     /// use recurring::{Event, Series};
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
@@ -190,7 +190,7 @@ where
     /// assert_eq!(events.next_back(), Some(Event::at(date(9999, 12, 31).at(22, 0, 0, 0))));
     /// assert_eq!(events.next_back(), Some(Event::at(date(9999, 12, 31).at(20, 0, 0, 0))));
     /// ```
-    pub fn iter(&self) -> Iter<'_, R> {
+    pub fn iter(&self) -> Iter<'_, P> {
         Iter::new(self)
     }
 
@@ -201,7 +201,7 @@ where
     /// ```
     /// use jiff::civil::date;
     /// use recurring::{Event, Series};
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
@@ -223,7 +223,7 @@ where
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
     /// use recurring::{Event, Series};
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let end = date(2026, 1, 1).at(0, 0, 0, 0);
@@ -245,7 +245,7 @@ where
     /// ```
     /// use jiff::civil::date;
     /// # use recurring::Series;
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
@@ -265,7 +265,7 @@ where
     /// ```
     /// use jiff::civil::date;
     /// use recurring::{Event, Series};
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
@@ -273,7 +273,7 @@ where
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        let closest = self.repeat.closest_to(instant, &self.range)?;
+        let closest = self.pattern.closest_to(instant, &self.range)?;
         if closest == instant {
             return self.get_event_unchecked(instant);
         }
@@ -293,7 +293,7 @@ where
     /// use jiff::ToSpan;
     /// use jiff::civil::{date, DateTime};
     /// use recurring::{Event, Series};
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series_end = date(2025, 2, 1).at(0, 0, 0, 0);
@@ -343,7 +343,7 @@ where
     /// use jiff::ToSpan;
     /// use jiff::civil::{date, DateTime};
     /// use recurring::{Event, Series};
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series_end = date(2025, 2, 1).at(0, 0, 0, 0);
@@ -377,7 +377,7 @@ where
     /// # }
     /// ```
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
-        self.repeat
+        self.pattern
             .next_after(instant, &self.range)
             .and_then(|next| self.get_event_unchecked(next))
     }
@@ -392,7 +392,7 @@ where
     /// use jiff::ToSpan;
     /// use jiff::civil::{date, DateTime};
     /// use recurring::{Event, Series};
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series = Series::new(series_start.., hourly(1));
@@ -417,7 +417,7 @@ where
     /// );
     /// ```
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
-        self.repeat
+        self.pattern
             .previous_before(instant, &self.range)
             .and_then(|previous| self.get_event_unchecked(previous))
     }
@@ -432,7 +432,7 @@ where
     /// use jiff::ToSpan;
     /// use jiff::civil::date;
     /// use recurring::{Event, Series};
-    /// use recurring::repeat::hourly;
+    /// use recurring::pattern::hourly;
     ///
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series = Series::new(series_start.., hourly(1));
@@ -455,7 +455,7 @@ where
     /// );
     /// ```
     pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
-        self.repeat
+        self.pattern
             .closest_to(instant, &self.range)
             .and_then(|closest| self.get_event_unchecked(closest))
     }
@@ -473,12 +473,12 @@ where
     }
 }
 
-impl<'a, R> IntoIterator for &'a Series<R>
+impl<'a, P> IntoIterator for &'a Series<P>
 where
-    R: Repeat,
+    P: Pattern,
 {
     type Item = Event;
-    type IntoIter = Iter<'a, R>;
+    type IntoIter = Iter<'a, P>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -499,22 +499,22 @@ where
 /// - `event_duration`: The [`Span`] of an individual event in the series. This could be minutes,
 ///   hours, days or any other duration the `Span` type supports. If `event_duration` is not set,
 ///   individual events will not have an end datetime and have an effective duration of zero.
-/// - `repeat`: The repeat interval for the series.
+/// - `pattern`: The recurrence pattern for the series.
 #[derive(Debug, Clone)]
-pub struct SeriesWith<R> {
-    repeat: R,
+pub struct SeriesWith<P> {
+    pattern: P,
     bounds: (Bound<DateTime>, Bound<DateTime>),
     event_duration: Span,
 }
 
-impl<R> SeriesWith<R>
+impl<P> SeriesWith<P>
 where
-    R: Repeat,
+    P: Pattern,
 {
     /// Creates an new `SeriesWith` from a `Series`.
-    fn new(series: Series<R>) -> SeriesWith<R> {
+    fn new(series: Series<P>) -> SeriesWith<P> {
         SeriesWith {
-            repeat: series.repeat,
+            pattern: series.pattern,
             bounds: series.range.into_bounds(),
             event_duration: series.event_duration,
         }
@@ -529,7 +529,7 @@ where
     /// use jiff::{ToSpan};
     /// use jiff::civil::date;
     /// use recurring::Series;
-    /// use recurring::repeat::daily;
+    /// use recurring::pattern::daily;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     ///
@@ -549,7 +549,7 @@ where
     /// # }
     /// ```
     #[must_use]
-    pub fn range<B: RangeBounds<DateTime>>(mut self, range: B) -> SeriesWith<R> {
+    pub fn range<B: RangeBounds<DateTime>>(mut self, range: B) -> SeriesWith<P> {
         self.bounds = range.into_bounds();
         self
     }
@@ -565,7 +565,7 @@ where
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
     /// use recurring::Series;
-    /// use recurring::repeat::daily;
+    /// use recurring::pattern::daily;
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
@@ -578,7 +578,7 @@ where
     /// # }
     /// ```
     #[must_use]
-    pub fn start(mut self, start: DateTime) -> SeriesWith<R> {
+    pub fn start(mut self, start: DateTime) -> SeriesWith<P> {
         self.bounds.0 = Bound::Included(start);
         self
     }
@@ -595,7 +595,7 @@ where
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// use jiff::civil::date;
     /// use recurring::Series;
-    /// use recurring::repeat::daily;
+    /// use recurring::pattern::daily;
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
@@ -608,7 +608,7 @@ where
     /// # }
     /// ```
     #[must_use]
-    pub fn end(mut self, end: DateTime) -> SeriesWith<R> {
+    pub fn end(mut self, end: DateTime) -> SeriesWith<P> {
         self.bounds.1 = Bound::Excluded(end);
         self
     }
@@ -625,7 +625,7 @@ where
     /// use jiff::ToSpan;
     /// use jiff::civil::date;
     /// use recurring::Series;
-    /// use recurring::repeat::daily;
+    /// use recurring::pattern::daily;
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
@@ -636,12 +636,12 @@ where
     /// # }
     /// ```
     #[must_use]
-    pub fn event_duration(mut self, event_duration: Span) -> SeriesWith<R> {
+    pub fn event_duration(mut self, event_duration: Span) -> SeriesWith<P> {
         self.event_duration = event_duration;
         self
     }
 
-    /// Sets the repeat interval for the series.
+    /// Sets the recurrence pattern for the series.
     ///
     /// # Example
     ///
@@ -650,26 +650,26 @@ where
     /// use jiff::ToSpan;
     /// use jiff::civil::date;
     /// use recurring::Series;
-    /// use recurring::repeat::daily;
+    /// use recurring::pattern::daily;
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
-    /// let s2 = s1.with().repeat(daily(2)).build()?;
+    /// let s2 = s1.with().pattern(daily(2)).build()?;
     ///
-    /// assert_eq!(s2.repeat(), &daily(2));
+    /// assert_eq!(s2.pattern(), &daily(2));
     /// # Ok(())
     /// # }
     /// ```
     #[must_use]
-    pub fn repeat<S: Repeat>(self, repeat: S) -> SeriesWith<S> {
+    pub fn pattern<Q: Pattern>(self, pattern: Q) -> SeriesWith<Q> {
         SeriesWith {
-            repeat,
+            pattern,
             bounds: self.bounds,
             event_duration: self.event_duration,
         }
     }
 
-    /// Builds a [`Series`] that yields events according to the provided [`Repeat`] implementation.
+    /// Builds a [`Series`] that yields events according to the provided recurrence [`Pattern`].
     ///
     /// # Errors
     ///
@@ -682,7 +682,7 @@ where
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// # use recurring::Series;
     /// use jiff::civil::date;
-    /// use recurring::repeat::daily;
+    /// use recurring::pattern::daily;
     ///
     /// let s1 = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., daily(1));
     ///
@@ -692,7 +692,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn build(self) -> Result<Series<R>, Error> {
+    pub fn build(self) -> Result<Series<P>, Error> {
         let range = try_simplify_range(self.bounds)?;
         if range.start >= range.end {
             return Err(Error::from(ErrorKind::InvalidBounds));
@@ -703,7 +703,7 @@ where
         }
 
         Ok(Series {
-            repeat: self.repeat,
+            pattern: self.pattern,
             range,
             event_duration: self.event_duration,
         })
@@ -715,15 +715,15 @@ where
 /// This struct is created by the [`.iter()`][Series::iter] method of a `Series`. See its
 /// documentation for more.
 #[derive(Debug, Clone)]
-pub struct Iter<'a, R> {
-    series: &'a Series<R>,
+pub struct Iter<'a, P> {
+    series: &'a Series<P>,
     first: bool,
     cursor_front: Option<DateTime>,
     cursor_back: Option<DateTime>,
 }
 
-impl<'a, R: Repeat> Iter<'a, R> {
-    fn new(series: &'a Series<R>) -> Iter<'a, R> {
+impl<'a, P: Pattern> Iter<'a, P> {
+    fn new(series: &'a Series<P>) -> Iter<'a, P> {
         Iter {
             series,
             first: true,
@@ -733,9 +733,9 @@ impl<'a, R: Repeat> Iter<'a, R> {
     }
 }
 
-impl<R> Iterator for Iter<'_, R>
+impl<P> Iterator for Iter<'_, P>
 where
-    R: Repeat,
+    P: Pattern,
 {
     type Item = Event;
 
@@ -753,9 +753,9 @@ where
     }
 }
 
-impl<R> DoubleEndedIterator for Iter<'_, R>
+impl<P> DoubleEndedIterator for Iter<'_, P>
 where
-    R: Repeat,
+    P: Pattern,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         let cursor = self.cursor_back.take()?;

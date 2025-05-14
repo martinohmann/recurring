@@ -1,13 +1,13 @@
-use crate::{Repeat, private};
+use crate::{Pattern, private};
 use core::cmp::Ord;
 use core::ops::Range;
 use jiff::civil::DateTime;
 
-/// A combination of two `Repeat` values.
+/// A combination of two recurrence patterns.
 ///
 /// This type is returned by the `.and()` method of the [`Combine`][crate::Combine] trait and
-/// exists to support building more complex repetition pattern than supported by the individual
-/// types from the [`repeat` module][crate::repeat].
+/// allows combining values of the types from the [`pattern` module][crate::pattern] into more
+/// complex recurrence patterns.
 ///
 /// See the documentation of the [`Combine`][crate::Combine] trait for usage examples and more
 /// context.
@@ -19,10 +19,10 @@ pub struct Combined<L, R> {
 
 impl<L, R> Combined<L, R>
 where
-    L: Repeat,
-    R: Repeat,
+    L: Pattern,
+    R: Pattern,
 {
-    /// Create a new `Combined` from two `Repeat` values.
+    /// Create a new `Combined` from two recurrence patterns.
     ///
     /// Consider using the [`.and()`][crate::Combine::and] method of the `Combine` trait instead
     /// because it's more convenient.
@@ -31,10 +31,10 @@ where
     }
 }
 
-impl<L, R> Repeat for Combined<L, R>
+impl<L, R> Pattern for Combined<L, R>
 where
-    L: Repeat,
-    R: Repeat,
+    L: Pattern,
+    R: Pattern,
 {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let left = self.left.next_after(instant, range);

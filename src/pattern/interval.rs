@@ -1,19 +1,15 @@
-use crate::{
-    Error, Repeat,
-    error::ErrorKind,
-    private,
-    repeat::utils::{intervals_in_range_until, is_interval_boundary},
-};
+use super::utils::{intervals_in_range_until, is_interval_boundary};
+use crate::{Error, Pattern, error::ErrorKind, private};
 use core::ops::Range;
 use jiff::{Span, civil::DateTime};
 
-/// A precise interval for repeating events.
+/// A fixed interval recurrence pattern.
 ///
 /// # Example
 ///
 /// ```
 /// use jiff::ToSpan;
-/// use recurring::repeat::Interval;
+/// use recurring::pattern::Interval;
 ///
 /// let every_two_hours = Interval::new(2.hours());
 /// ```
@@ -35,7 +31,7 @@ impl Interval {
     ///
     /// ```
     /// use jiff::ToSpan;
-    /// use recurring::repeat::Interval;
+    /// use recurring::pattern::Interval;
     ///
     /// let every_two_hours = Interval::new(2.hours());
     /// ```
@@ -60,7 +56,7 @@ impl Interval {
     ///
     /// ```
     /// use jiff::ToSpan;
-    /// use recurring::repeat::Interval;
+    /// use recurring::pattern::Interval;
     ///
     /// assert!(Interval::try_new(1.day()).is_ok());
     /// assert!(Interval::try_new(0.seconds()).is_err());
@@ -83,7 +79,7 @@ impl Interval {
     }
 }
 
-impl Repeat for Interval {
+impl Pattern for Interval {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if instant < range.start {
             // We want the range start if instant happens before that.

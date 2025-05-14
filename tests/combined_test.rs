@@ -2,14 +2,14 @@ mod common;
 
 use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, date};
-use recurring::repeat::{hourly, spec};
-use recurring::{Combine, Event, Repeat};
+use recurring::pattern::{hourly, spec};
+use recurring::{Combine, Event, Pattern};
 
 #[test]
 fn combined() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = date(2025, 12, 31).at(23, 59, 59, 0);
-    let repeat = spec()
+    let pattern = spec()
         .hour(10)
         .minute(30)
         .second(0)
@@ -17,7 +17,7 @@ fn combined() {
         .and(hourly(6));
 
     assert_eq!(
-        series_take(start..end, repeat.clone(), 10),
+        series_take(start..end, pattern.clone(), 10),
         vec![
             Event::at(date(2025, 1, 1).at(12, 0, 0, 0)),
             Event::at(date(2025, 1, 1).at(12, 45, 30, 0)),
@@ -33,7 +33,7 @@ fn combined() {
     );
 
     assert_eq!(
-        series_take_rev(start..end, repeat, 10),
+        series_take_rev(start..end, pattern, 10),
         vec![
             Event::at(date(2025, 12, 31).at(18, 0, 0, 0)),
             Event::at(date(2025, 12, 31).at(12, 45, 30, 0)),
@@ -54,7 +54,7 @@ fn combined_closest_to() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = date(2025, 12, 31).at(12, 0, 0, 0);
     let range = start..end;
-    let repeat = spec()
+    let pattern = spec()
         .hour(10)
         .minute(30)
         .second(0)
@@ -62,27 +62,27 @@ fn combined_closest_to() {
         .and(hourly(6));
 
     assert_eq!(
-        repeat.closest_to(date(2024, 12, 31).at(0, 0, 0, 0), &range),
+        pattern.closest_to(date(2024, 12, 31).at(0, 0, 0, 0), &range),
         Some(date(2025, 1, 1).at(12, 0, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_to(date(2025, 1, 1).at(12, 0, 0, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(12, 0, 0, 0), &range),
         Some(date(2025, 1, 1).at(12, 0, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_to(date(2025, 1, 2).at(8, 14, 59, 0), &range),
+        pattern.closest_to(date(2025, 1, 2).at(8, 14, 59, 0), &range),
         Some(date(2025, 1, 2).at(6, 0, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_to(date(2025, 1, 2).at(8, 15, 0, 0), &range),
+        pattern.closest_to(date(2025, 1, 2).at(8, 15, 0, 0), &range),
         Some(date(2025, 1, 2).at(10, 30, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_to(date(2025, 1, 2).at(8, 15, 1, 0), &range),
+        pattern.closest_to(date(2025, 1, 2).at(8, 15, 1, 0), &range),
         Some(date(2025, 1, 2).at(10, 30, 0, 0)),
     );
     assert_eq!(
-        repeat.closest_to(DateTime::MAX, &range),
+        pattern.closest_to(DateTime::MAX, &range),
         Some(date(2025, 12, 31).at(10, 30, 0, 0)),
     );
 }

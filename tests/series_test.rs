@@ -5,7 +5,7 @@ use jiff::{
     ToSpan,
     civil::{DateTime, date, datetime, time},
 };
-use recurring::repeat::{daily, hourly};
+use recurring::pattern::{daily, hourly};
 use recurring::{Event, Series};
 
 #[test]

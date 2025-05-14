@@ -1,7 +1,7 @@
 mod timeunit;
 
 use self::timeunit::{Days, Hours, Minutes, Months, Seconds, Weekdays, Years};
-use crate::{Repeat, private};
+use crate::{Pattern, private};
 use core::ops::Range;
 use jiff::ToSpan;
 use jiff::civil::{DateTime, Weekday};
@@ -20,7 +20,7 @@ use jiff::civil::{DateTime, Weekday};
 /// # Example: once per day at a certain time
 ///
 /// ```
-/// # use recurring::repeat::TimeSpec;
+/// # use recurring::pattern::TimeSpec;
 /// // Every day at 12:30.
 /// let spec = TimeSpec::new().hour(12).minute(30);
 /// ```
@@ -28,7 +28,7 @@ use jiff::civil::{DateTime, Weekday};
 /// # Example: at multiple occasion thoughout the day
 ///
 /// ```
-/// # use recurring::repeat::TimeSpec;
+/// # use recurring::pattern::TimeSpec;
 /// // Every day at 12:30, 13:30 and 14:30.
 /// let spec = TimeSpec::new().hours(12..15).minute(30);
 /// ```
@@ -36,7 +36,7 @@ use jiff::civil::{DateTime, Weekday};
 /// # Example: multiple non-consecutive time units
 ///
 /// ```
-/// # use recurring::repeat::TimeSpec;
+/// # use recurring::pattern::TimeSpec;
 /// // Every day at 10:30 and 20:30.
 /// let spec = TimeSpec::new().hour(10).hour(20).minute(30);
 /// // Or
@@ -49,7 +49,7 @@ use jiff::civil::{DateTime, Weekday};
 /// but might not be what you want.
 ///
 /// ```
-/// # use recurring::repeat::TimeSpec;
+/// # use recurring::pattern::TimeSpec;
 /// // This ticks at 10:15 and 20:30. But it also ticks at 10:30 and 20:15.
 /// let spec = TimeSpec::new()
 ///     .hour(10).minute(15)
@@ -76,7 +76,7 @@ use jiff::civil::{DateTime, Weekday};
 /// ```
 /// // This ticks at every hour from 10 to 19 at every minute from 15 to 29 in european summer
 /// // months:
-/// # use recurring::repeat::TimeSpec;
+/// # use recurring::pattern::TimeSpec;
 /// let spec = TimeSpec::new().months(6..=9).hours(10..=20).minutes(15..30);
 /// ```
 #[derive(Debug, Clone, Default)]
@@ -431,7 +431,7 @@ impl TimeSpec {
     }
 }
 
-impl Repeat for TimeSpec {
+impl Pattern for TimeSpec {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let instant = instant.checked_add(1.second()).ok()?;
         self.next_after_or_current(instant, range)
