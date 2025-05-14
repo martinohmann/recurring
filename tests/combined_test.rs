@@ -3,7 +3,7 @@ mod common;
 use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, date};
 use recurring::repeat::{hourly, spec};
-use recurring::{Combine, Event, Repeat};
+use recurring::{Combine, Event, Pattern};
 
 #[test]
 fn combined() {

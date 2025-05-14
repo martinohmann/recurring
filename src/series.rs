@@ -1,4 +1,4 @@
-use crate::{Error, Event, IntoBounds, Repeat, error::ErrorKind, try_simplify_range};
+use crate::{Error, Event, IntoBounds, Pattern, error::ErrorKind, try_simplify_range};
 use core::ops::{Bound, Range, RangeBounds};
 use jiff::{Span, civil::DateTime};
 
@@ -34,7 +34,7 @@ pub struct Series<R> {
 
 impl<R> Series<R>
 where
-    R: Repeat,
+    R: Pattern,
 {
     /// Creates a new `Series` that produces events within the provided `range` according to the
     /// given `repeat` interval.
@@ -475,7 +475,7 @@ where
 
 impl<'a, R> IntoIterator for &'a Series<R>
 where
-    R: Repeat,
+    R: Pattern,
 {
     type Item = Event;
     type IntoIter = Iter<'a, R>;
@@ -509,7 +509,7 @@ pub struct SeriesWith<R> {
 
 impl<R> SeriesWith<R>
 where
-    R: Repeat,
+    R: Pattern,
 {
     /// Creates an new `SeriesWith` from a `Series`.
     fn new(series: Series<R>) -> SeriesWith<R> {
@@ -661,7 +661,7 @@ where
     /// # }
     /// ```
     #[must_use]
-    pub fn repeat<S: Repeat>(self, repeat: S) -> SeriesWith<S> {
+    pub fn repeat<S: Pattern>(self, repeat: S) -> SeriesWith<S> {
         SeriesWith {
             repeat,
             bounds: self.bounds,
@@ -722,7 +722,7 @@ pub struct Iter<'a, R> {
     cursor_back: Option<DateTime>,
 }
 
-impl<'a, R: Repeat> Iter<'a, R> {
+impl<'a, R: Pattern> Iter<'a, R> {
     fn new(series: &'a Series<R>) -> Iter<'a, R> {
         Iter {
             series,
@@ -735,7 +735,7 @@ impl<'a, R: Repeat> Iter<'a, R> {
 
 impl<R> Iterator for Iter<'_, R>
 where
-    R: Repeat,
+    R: Pattern,
 {
     type Item = Event;
 
@@ -755,7 +755,7 @@ where
 
 impl<R> DoubleEndedIterator for Iter<'_, R>
 where
-    R: Repeat,
+    R: Pattern,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         let cursor = self.cursor_back.take()?;

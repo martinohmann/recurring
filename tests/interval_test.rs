@@ -1,6 +1,6 @@
 use jiff::ToSpan;
 use jiff::civil::{DateTime, date};
-use recurring::Repeat;
+use recurring::Pattern;
 use recurring::repeat::Interval;
 
 #[test]

@@ -1,7 +1,7 @@
 mod timeunit;
 
 use self::timeunit::{Days, Hours, Minutes, Months, Seconds, Weekdays, Years};
-use crate::{Repeat, private};
+use crate::{Pattern, private};
 use core::ops::Range;
 use jiff::ToSpan;
 use jiff::civil::{DateTime, Weekday};
@@ -431,7 +431,7 @@ impl TimeSpec {
     }
 }
 
-impl Repeat for TimeSpec {
+impl Pattern for TimeSpec {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let instant = instant.checked_add(1.second()).ok()?;
         self.next_after_or_current(instant, range)

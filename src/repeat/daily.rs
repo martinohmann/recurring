@@ -1,4 +1,4 @@
-use crate::{Error, Repeat, private, repeat::Interval};
+use crate::{Error, Pattern, private, repeat::Interval};
 use alloc::vec::Vec;
 use core::ops::Range;
 use jiff::{
@@ -130,7 +130,7 @@ impl Daily {
     }
 }
 
-impl Repeat for Daily {
+impl Pattern for Daily {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if self.at.is_empty() {
             return self.interval.next_after(instant, range);

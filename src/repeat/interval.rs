@@ -1,5 +1,5 @@
 use crate::{
-    Error, Repeat,
+    Error, Pattern,
     error::ErrorKind,
     private,
     repeat::utils::{intervals_in_range_until, is_interval_boundary},
@@ -83,7 +83,7 @@ impl Interval {
     }
 }
 
-impl Repeat for Interval {
+impl Pattern for Interval {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if instant < range.start {
             // We want the range start if instant happens before that.

@@ -32,7 +32,7 @@ mod private {
 ///
 /// There is usually no need to interact with this trait directly. Use the functionality provided
 /// by [`Series`] instead because it is more convenient.
-pub trait Repeat: private::Sealed {
+pub trait Pattern: private::Sealed {
     /// Find the next `DateTime` after `instant` within a range.
     ///
     /// This must always returns a datetime that is strictly larger than `instant` or `None` if
@@ -72,19 +72,19 @@ pub trait Repeat: private::Sealed {
 ///     .and(daily_at_midnight)
 ///     .and(first_of_month_at_six);
 /// ```
-pub trait Combine: Repeat + Sized {
+pub trait Combine: Pattern + Sized {
     /// Combine `Self` with another `Repeat`.
     ///
     /// This allows for building more complex repeat pattern.
     ///
     /// See the documentation of the [`Combine`] trait for usage examples.
     #[must_use]
-    fn and<R: Repeat>(self, other: R) -> Combined<Self, R> {
+    fn and<R: Pattern>(self, other: R) -> Combined<Self, R> {
         Combined::new(self, other)
     }
 }
 
-impl<T: Repeat> Combine for T {}
+impl<T: Pattern> Combine for T {}
 
 /// A trait for converting values representing points in time into a [`Series`].
 pub trait ToSeries {
@@ -93,7 +93,7 @@ pub trait ToSeries {
     /// # Errors
     ///
     /// Returns an error if the value cannot be converted into a valid `Series`.
-    fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error>;
+    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error>;
 }
 
 impl ToSeries for Event {
@@ -125,7 +125,7 @@ impl ToSeries for Event {
     /// # Ok(())
     /// # }
     /// ```
-    fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
+    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error> {
         self.start()
             .to_series(repeat)?
             .with()
@@ -157,7 +157,7 @@ impl ToSeries for DateTime {
     /// # Ok(())
     /// # }
     /// ```
-    fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
+    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error> {
         Series::try_new(*self.., repeat)
     }
 }
@@ -187,7 +187,7 @@ impl ToSeries for Date {
     /// # Ok(())
     /// # }
     /// ```
-    fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
+    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error> {
         self.to_datetime(time(0, 0, 0, 0)).to_series(repeat)
     }
 }
@@ -219,7 +219,7 @@ impl ToSeries for Zoned {
     /// # Ok(())
     /// # }
     /// ```
-    fn to_series<R: Repeat>(&self, repeat: R) -> Result<Series<R>, Error> {
+    fn to_series<R: Pattern>(&self, repeat: R) -> Result<Series<R>, Error> {
         self.datetime().to_series(repeat)
     }
 }

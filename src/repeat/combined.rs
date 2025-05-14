@@ -1,4 +1,4 @@
-use crate::{Repeat, private};
+use crate::{Pattern, private};
 use core::cmp::Ord;
 use core::ops::Range;
 use jiff::civil::DateTime;
@@ -19,8 +19,8 @@ pub struct Combined<L, R> {
 
 impl<L, R> Combined<L, R>
 where
-    L: Repeat,
-    R: Repeat,
+    L: Pattern,
+    R: Pattern,
 {
     /// Create a new `Combined` from two `Repeat` values.
     ///
@@ -31,10 +31,10 @@ where
     }
 }
 
-impl<L, R> Repeat for Combined<L, R>
+impl<L, R> Pattern for Combined<L, R>
 where
-    L: Repeat,
-    R: Repeat,
+    L: Pattern,
+    R: Pattern,
 {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let left = self.left.next_after(instant, range);

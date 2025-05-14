@@ -3,7 +3,7 @@ mod common;
 use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, Weekday, date};
 use recurring::repeat::{TimeSpec, spec};
-use recurring::{Event, Repeat};
+use recurring::{Event, Pattern};
 
 #[test]
 fn timespec_default() {
