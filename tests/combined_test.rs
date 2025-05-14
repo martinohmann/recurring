@@ -2,18 +2,18 @@ mod common;
 
 use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, date};
-use recurring::pattern::{hourly, spec};
+use recurring::pattern::{cron, hourly};
 use recurring::{Combine, Event, Pattern};
 
 #[test]
 fn combined() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = date(2025, 12, 31).at(23, 59, 59, 0);
-    let pattern = spec()
+    let pattern = cron()
         .hour(10)
         .minute(30)
         .second(0)
-        .and(spec().hour(12).minute(45).second(30))
+        .and(cron().hour(12).minute(45).second(30))
         .and(hourly(6));
 
     assert_eq!(
@@ -54,11 +54,11 @@ fn combined_closest_to() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = date(2025, 12, 31).at(12, 0, 0, 0);
     let range = start..end;
-    let pattern = spec()
+    let pattern = cron()
         .hour(10)
         .minute(30)
         .second(0)
-        .and(spec().hour(12).minute(45).second(30))
+        .and(cron().hour(12).minute(45).second(30))
         .and(hourly(6));
 
     assert_eq!(

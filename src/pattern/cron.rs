@@ -1,65 +1,63 @@
-mod timeunit;
-
-use self::timeunit::{Days, Hours, Minutes, Months, Seconds, Weekdays, Years};
+use super::timeunit::{Days, Hours, Minutes, Months, Seconds, Weekdays, Years};
 use crate::{Pattern, private};
 use core::ops::Range;
 use jiff::ToSpan;
 use jiff::civil::{DateTime, Weekday};
 
-/// A time spec implementation similar to the cron pattern.
+/// A cron-like recurrence pattern.
 ///
 /// You can imagine this as some more granular form of the the cron pattern `* * * * *` (at
-/// every minute). `TimeSpec` also includes a 6th component to facilitate second precision.
+/// every minute). `Cron` also includes a 6th component to facilitate second precision.
 ///
-/// The default of a time spec is to tick at every second, which would be equivalent to the
-/// second-enhanced cron pattern of `* * * * * *`.
+/// The default value of a `Cron` produces an event at every second, which would be equivalent to
+/// the second-enhanced cron pattern of `* * * * * *`.
 ///
-/// After constructed, this type has various builder methods like [`.second()`][TimeSpec::second]
-/// and [`.hours()`][TimeSpec::hours] to configure the details of the timespec.
+/// After constructed, this type has various builder methods like [`.second()`][Cron::second]
+/// and [`.hours()`][Cron::hours] to configure the details of the cron pattern.
 ///
 /// # Example: once per day at a certain time
 ///
 /// ```
-/// # use recurring::pattern::TimeSpec;
+/// # use recurring::pattern::Cron;
 /// // Every day at 12:30.
-/// let spec = TimeSpec::new().hour(12).minute(30);
+/// let pattern = Cron::new().hour(12).minute(30);
 /// ```
 ///
 /// # Example: at multiple occasion thoughout the day
 ///
 /// ```
-/// # use recurring::pattern::TimeSpec;
+/// # use recurring::pattern::Cron;
 /// // Every day at 12:30, 13:30 and 14:30.
-/// let spec = TimeSpec::new().hours(12..15).minute(30);
+/// let pattern = Cron::new().hours(12..15).minute(30);
 /// ```
 ///
 /// # Example: multiple non-consecutive time units
 ///
 /// ```
-/// # use recurring::pattern::TimeSpec;
+/// # use recurring::pattern::Cron;
 /// // Every day at 10:30 and 20:30.
-/// let spec = TimeSpec::new().hour(10).hour(20).minute(30);
+/// let pattern = Cron::new().hour(10).hour(20).minute(30);
 /// // Or
-/// let spec = TimeSpec::new().hours([10, 20]).minute(30);
+/// let pattern = Cron::new().hours([10, 20]).minute(30);
 /// ```
 ///
 /// # Example: pitfalls
 ///
-/// Because `TimeSpec` behaves pretty much like a cron pattern, the following is expected behaviour
+/// Because `Cron` behaves pretty much like a cron pattern, the following is expected behaviour
 /// but might not be what you want.
 ///
 /// ```
-/// # use recurring::pattern::TimeSpec;
+/// # use recurring::pattern::Cron;
 /// // This ticks at 10:15 and 20:30. But it also ticks at 10:30 and 20:15.
-/// let spec = TimeSpec::new()
+/// let pattern = Cron::new()
 ///     .hour(10).minute(15)
 ///     .hour(20).minute(30);
 ///
 /// // And so does this.
-/// let spec = TimeSpec::new().hours([10, 20]).minutes([15, 30]);
+/// let pattern = Cron::new().hours([10, 20]).minutes([15, 30]);
 ///
 /// // Let's break it down:
-/// let spec = TimeSpec::new()
+/// let pattern = Cron::new()
 ///     .hour(10)    // Tick at hour 10.
 ///     .minute(15)  // Tick at minute 15.
 ///     .hour(20)    // Tick at hour 20 (we already tick at 10 too).
@@ -76,11 +74,11 @@ use jiff::civil::{DateTime, Weekday};
 /// ```
 /// // This ticks at every hour from 10 to 19 at every minute from 15 to 29 in european summer
 /// // months:
-/// # use recurring::pattern::TimeSpec;
-/// let spec = TimeSpec::new().months(6..=9).hours(10..=20).minutes(15..30);
+/// # use recurring::pattern::Cron;
+/// let pattern = Cron::new().months(6..=9).hours(10..=20).minutes(15..30);
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct TimeSpec {
+pub struct Cron {
     years: Years,
     months: Months,
     weekdays: Weekdays,
@@ -91,16 +89,16 @@ pub struct TimeSpec {
 }
 
 // Builder methods
-impl TimeSpec {
-    /// Create a new `TimeSpec` that ticks every second.
-    pub fn new() -> TimeSpec {
-        TimeSpec::default()
+impl Cron {
+    /// Create a new `Cron` that ticks every second.
+    pub fn new() -> Cron {
+        Cron::default()
     }
 
-    /// Limit the time spec to a specific year.
+    /// Limit the pattern to a specific year.
     ///
-    /// This method can be called multiple times to limit the time spec to multiple different
-    /// years. Alternatively, you can use [`.years()`][TimeSpec::years] to feed years from an
+    /// This method can be called multiple times to limit the pattern to multiple different
+    /// years. Alternatively, you can use [`.years()`][Cron::years] to feed years from an
     /// iterator.
     ///
     /// # Panics
@@ -108,26 +106,26 @@ impl TimeSpec {
     /// This panics when the year is too small or too big. The minimum value is `-9999`. The
     /// maximum value is `9999`.
     #[must_use]
-    pub fn year(mut self, year: i16) -> TimeSpec {
+    pub fn year(mut self, year: i16) -> Cron {
         self.years.insert(year);
         self
     }
 
-    /// Limit the years in the time spec to specific values from an iterator.
+    /// Limit the years in the pattern to specific values from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when any of the year values produced by the iterator is year is too small
     /// or too big. The minimum value is `-9999`. The maximum value is `9999`.
     #[must_use]
-    pub fn years<I: IntoIterator<Item = i16>>(self, years: I) -> TimeSpec {
-        years.into_iter().fold(self, TimeSpec::year)
+    pub fn years<I: IntoIterator<Item = i16>>(self, years: I) -> Cron {
+        years.into_iter().fold(self, Cron::year)
     }
 
-    /// Limit the time spec to a specific month.
+    /// Limit the pattern to a specific month.
     ///
-    /// This method can be called multiple times to limit the time spec to multiple different
-    /// months. Alternatively, you can use [`.months()`][TimeSpec::months] to feed months from an
+    /// This method can be called multiple times to limit the pattern to multiple different
+    /// months. Alternatively, you can use [`.months()`][Cron::months] to feed months from an
     /// iterator.
     ///
     /// # Panics
@@ -135,146 +133,145 @@ impl TimeSpec {
     /// This panics when the month is too small or too big. The minimum value is `1`. The maximum
     /// value is `12`.
     #[must_use]
-    pub fn month(mut self, month: i8) -> TimeSpec {
+    pub fn month(mut self, month: i8) -> Cron {
         self.months.insert(month);
         self
     }
 
-    /// Limit the months in the time spec to specific values from an iterator.
+    /// Limit the months in the pattern to specific values from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when any of the month values produced by the iterator is month is too small
     /// or too big. The minimum value is `1`. The maximum value is `12`.
     #[must_use]
-    pub fn months<I: IntoIterator<Item = i8>>(self, months: I) -> TimeSpec {
-        months.into_iter().fold(self, TimeSpec::month)
+    pub fn months<I: IntoIterator<Item = i8>>(self, months: I) -> Cron {
+        months.into_iter().fold(self, Cron::month)
     }
 
-    /// Limit the time spec to a specific weekday.
+    /// Limit the pattern to a specific weekday.
     ///
-    /// This method can be called multiple times to limit the time spec to multiple different
-    /// weekdays. Alternatively, you can use [`.weekdays()`][TimeSpec::weekdays] to feed weekdays
+    /// This method can be called multiple times to limit the pattern to multiple different
+    /// weekdays. Alternatively, you can use [`.weekdays()`][Cron::weekdays] to feed weekdays
     /// from an iterator.
     #[must_use]
-    pub fn weekday(mut self, weekday: Weekday) -> TimeSpec {
+    pub fn weekday(mut self, weekday: Weekday) -> Cron {
         self.weekdays.insert(weekday.to_monday_one_offset());
         self
     }
 
-    /// Limit the weekdays in the time spec to specific values from an iterator.
+    /// Limit the weekdays in the pattern to specific values from an iterator.
     #[must_use]
-    pub fn weekdays<I: IntoIterator<Item = Weekday>>(self, weekdays: I) -> TimeSpec {
-        weekdays.into_iter().fold(self, TimeSpec::weekday)
+    pub fn weekdays<I: IntoIterator<Item = Weekday>>(self, weekdays: I) -> Cron {
+        weekdays.into_iter().fold(self, Cron::weekday)
     }
 
-    /// Limit the time spec to a specific day.
+    /// Limit the pattern to a specific day.
     ///
-    /// This method can be called multiple times to limit the time spec to multiple different days.
-    /// Alternatively, you can use [`.days()`][TimeSpec::days] to feed days from an iterator.
+    /// This method can be called multiple times to limit the pattern to multiple different days.
+    /// Alternatively, you can use [`.days()`][Cron::days] to feed days from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when the day is too small or too big. The minimum value is `1`. The maximum
     /// value is `31`.
     #[must_use]
-    pub fn day(mut self, day: i8) -> TimeSpec {
+    pub fn day(mut self, day: i8) -> Cron {
         self.days.insert(day);
         self
     }
 
-    /// Limit the days in the time spec to specific values from an iterator.
+    /// Limit the days in the pattern to specific values from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when any of the day values produced by the iterator is day is too small
     /// or too big. The minimum value is `1`. The maximum value is `31`.
     #[must_use]
-    pub fn days<I: IntoIterator<Item = i8>>(self, days: I) -> TimeSpec {
-        days.into_iter().fold(self, TimeSpec::day)
+    pub fn days<I: IntoIterator<Item = i8>>(self, days: I) -> Cron {
+        days.into_iter().fold(self, Cron::day)
     }
 
-    /// Limit the time spec to a specific hour.
+    /// Limit the pattern to a specific hour.
     ///
-    /// This method can be called multiple times to limit the time spec to multiple different hours.
-    /// Alternatively, you can use [`.hours()`][TimeSpec::hours] to feed hours from an iterator.
+    /// This method can be called multiple times to limit the pattern to multiple different hours.
+    /// Alternatively, you can use [`.hours()`][Cron::hours] to feed hours from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when the hour is too small or too big. The minimum value is `0`. The maximum
     /// value is `23`.
     #[must_use]
-    pub fn hour(mut self, hour: i8) -> TimeSpec {
+    pub fn hour(mut self, hour: i8) -> Cron {
         self.hours.insert(hour);
         self
     }
 
-    /// Limit the hours in the time spec to specific values from an iterator.
+    /// Limit the hours in the pattern to specific values from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when any of the hour values produced by the iterator is hour is too small
     /// or too big. The minimum value is `0`. The maximum value is `23`.
     #[must_use]
-    pub fn hours<I: IntoIterator<Item = i8>>(self, hours: I) -> TimeSpec {
-        hours.into_iter().fold(self, TimeSpec::hour)
+    pub fn hours<I: IntoIterator<Item = i8>>(self, hours: I) -> Cron {
+        hours.into_iter().fold(self, Cron::hour)
     }
 
-    /// Limit the time spec to a specific minute.
+    /// Limit the pattern to a specific minute.
     ///
-    /// This method can be called multiple times to limit the time spec to multiple different minutes.
-    /// Alternatively, you can use [`.minutes()`][TimeSpec::minutes] to feed minutes from an iterator.
+    /// This method can be called multiple times to limit the pattern to multiple different minutes.
+    /// Alternatively, you can use [`.minutes()`][Cron::minutes] to feed minutes from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when the minute is too small or too big. The minimum value is `0`. The maximum
     /// value is `59`.
     #[must_use]
-    pub fn minute(mut self, minute: i8) -> TimeSpec {
+    pub fn minute(mut self, minute: i8) -> Cron {
         self.minutes.insert(minute);
         self
     }
 
-    /// Limit the minutes in the time spec to specific values from an iterator.
+    /// Limit the minutes in the pattern to specific values from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when any of the minute values produced by the iterator is minute is too small
     /// or too big. The minimum value is `0`. The maximum value is `59`.
     #[must_use]
-    pub fn minutes<I: IntoIterator<Item = i8>>(self, minutes: I) -> TimeSpec {
-        minutes.into_iter().fold(self, TimeSpec::minute)
+    pub fn minutes<I: IntoIterator<Item = i8>>(self, minutes: I) -> Cron {
+        minutes.into_iter().fold(self, Cron::minute)
     }
 
-    /// Limit the time spec to a specific second.
+    /// Limit the pattern to a specific second.
     ///
-    /// This method can be called multiple times to limit the time spec to multiple different seconds.
-    /// Alternatively, you can use [`.seconds()`][TimeSpec::seconds] to feed seconds from an iterator.
+    /// This method can be called multiple times to limit the pattern to multiple different seconds.
+    /// Alternatively, you can use [`.seconds()`][Cron::seconds] to feed seconds from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when the second is too small or too big. The minimum value is `0`. The maximum
     /// value is `59`.
     #[must_use]
-    pub fn second(mut self, second: i8) -> TimeSpec {
+    pub fn second(mut self, second: i8) -> Cron {
         self.seconds.insert(second);
         self
     }
 
-    /// Limit the seconds in the time spec to specific values from an iterator.
+    /// Limit the seconds in the pattern to specific values from an iterator.
     ///
     /// # Panics
     ///
     /// This panics when any of the second values produced by the iterator is second is too small
     /// or too big. The minimum value is `0`. The maximum value is `59`.
     #[must_use]
-    pub fn seconds<I: IntoIterator<Item = i8>>(self, seconds: I) -> TimeSpec {
-        seconds.into_iter().fold(self, TimeSpec::second)
+    pub fn seconds<I: IntoIterator<Item = i8>>(self, seconds: I) -> Cron {
+        seconds.into_iter().fold(self, Cron::second)
     }
 }
 
-// Implementation of finding timespec events.
-impl TimeSpec {
+impl Cron {
     fn next_after_or_current(
         &self,
         instant: DateTime,
@@ -431,7 +428,7 @@ impl TimeSpec {
     }
 }
 
-impl Pattern for TimeSpec {
+impl Pattern for Cron {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let instant = instant.checked_add(1.second()).ok()?;
         self.next_after_or_current(instant, range)
@@ -469,7 +466,7 @@ impl Pattern for TimeSpec {
     }
 }
 
-impl private::Sealed for TimeSpec {}
+impl private::Sealed for Cron {}
 
 struct DateTimeClamp {
     year: i16,

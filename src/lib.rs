@@ -64,11 +64,11 @@ pub trait Pattern: private::Sealed {
 ///
 /// ```
 /// use recurring::Combine;
-/// use recurring::pattern::spec;
+/// use recurring::pattern::cron;
 ///
-/// let daily_at_noon = spec().hour(12).minute(0).second(0);
-/// let daily_at_midnight = spec().hour(0).minute(0).second(0);
-/// let first_of_month_at_six = spec().day(1).hour(6).minute(0).second(0);
+/// let daily_at_noon = cron().hour(12).minute(0).second(0);
+/// let daily_at_midnight = cron().hour(0).minute(0).second(0);
+/// let first_of_month_at_six = cron().day(1).hour(6).minute(0).second(0);
 ///
 /// let combined = daily_at_noon
 ///     .and(daily_at_midnight)

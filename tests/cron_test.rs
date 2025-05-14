@@ -2,15 +2,15 @@ mod common;
 
 use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, Weekday, date};
-use recurring::pattern::{TimeSpec, spec};
+use recurring::pattern::{Cron, cron};
 use recurring::{Event, Pattern};
 
 #[test]
-fn timespec_default() {
+fn cron_default() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
 
     assert_eq!(
-        series_take(start.., spec(), 5),
+        series_take(start.., cron(), 5),
         vec![
             Event::at(date(2025, 1, 1).at(12, 0, 0, 0)),
             Event::at(date(2025, 1, 1).at(12, 0, 1, 0)),
@@ -21,7 +21,7 @@ fn timespec_default() {
     );
 
     assert_eq!(
-        series_take_rev(start.., spec(), 5),
+        series_take_rev(start.., cron(), 5),
         vec![
             Event::at(date(9999, 12, 31).at(23, 59, 59, 0)),
             Event::at(date(9999, 12, 31).at(23, 59, 58, 0)),
@@ -33,10 +33,10 @@ fn timespec_default() {
 }
 
 #[test]
-fn timespec_daily_at() {
+fn cron_daily_at() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = DateTime::MAX;
-    let pattern = spec().hours(10..12).minute(30).second(0);
+    let pattern = cron().hours(10..12).minute(30).second(0);
 
     assert_eq!(
         series_take(start..end, pattern.clone(), 5),
@@ -62,9 +62,9 @@ fn timespec_daily_at() {
 }
 
 #[test]
-fn timespec_weekdays() {
+fn cron_weekdays() {
     let start = date(2025, 5, 11).at(12, 0, 0, 0);
-    let pattern = spec()
+    let pattern = cron()
         .weekdays([Weekday::Monday, Weekday::Thursday])
         .hour(12)
         .minute(0)
@@ -94,80 +94,80 @@ fn timespec_weekdays() {
 }
 
 #[test]
-fn timespec_next_after() {
+fn cron_next_after() {
     let range = DateTime::MIN..DateTime::MAX;
-    let ts = TimeSpec::new().minute(3).second(5).second(10);
+    let pattern = Cron::new().minute(3).second(5).second(10);
 
     assert_eq!(
-        ts.next_after(date(2025, 1, 1).at(0, 0, 0, 0), &range),
+        pattern.next_after(date(2025, 1, 1).at(0, 0, 0, 0), &range),
         Some(date(2025, 1, 1).at(0, 3, 5, 0))
     );
 
     assert_eq!(
-        ts.next_after(date(2025, 1, 1).at(0, 3, 5, 0), &range),
+        pattern.next_after(date(2025, 1, 1).at(0, 3, 5, 0), &range),
         Some(date(2025, 1, 1).at(0, 3, 10, 0))
     );
 
     assert_eq!(
-        ts.next_after(date(2025, 1, 1).at(0, 3, 10, 0), &range),
+        pattern.next_after(date(2025, 1, 1).at(0, 3, 10, 0), &range),
         Some(date(2025, 1, 1).at(1, 3, 5, 0))
     );
 }
 
 #[test]
-fn timespec_previous_before() {
+fn cron_previous_before() {
     let range = DateTime::MIN..DateTime::MAX;
-    let ts = TimeSpec::new().minute(3).seconds([5, 10]);
+    let pattern = Cron::new().minute(3).seconds([5, 10]);
 
     assert_eq!(
-        ts.previous_before(date(2025, 1, 1).at(0, 3, 5, 0), &range),
+        pattern.previous_before(date(2025, 1, 1).at(0, 3, 5, 0), &range),
         Some(date(2024, 12, 31).at(23, 3, 10, 0))
     );
 
     assert_eq!(
-        ts.previous_before(date(2024, 12, 31).at(23, 3, 10, 0), &range),
+        pattern.previous_before(date(2024, 12, 31).at(23, 3, 10, 0), &range),
         Some(date(2024, 12, 31).at(23, 3, 5, 0))
     );
 
     assert_eq!(
-        ts.previous_before(date(2024, 12, 31).at(23, 3, 5, 0), &range),
+        pattern.previous_before(date(2024, 12, 31).at(23, 3, 5, 0), &range),
         Some(date(2024, 12, 31).at(22, 3, 10, 0))
     );
 }
 
 #[test]
-fn timespec_closest_to() {
+fn cron_closest_to() {
     let range = DateTime::MIN..DateTime::MAX;
-    let ts = TimeSpec::new().hour(1).minute(30).second(0);
+    let pattern = Cron::new().hour(1).minute(30).second(0);
 
     assert_eq!(
-        ts.closest_to(date(2025, 1, 1).at(1, 29, 59, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(1, 29, 59, 0), &range),
         Some(date(2025, 1, 1).at(1, 30, 0, 0))
     );
 
     assert_eq!(
-        ts.closest_to(date(2025, 1, 1).at(1, 30, 1, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(1, 30, 1, 0), &range),
         Some(date(2025, 1, 1).at(1, 30, 0, 0))
     );
 
     assert_eq!(
-        ts.closest_to(date(2025, 1, 1).at(14, 0, 0, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(14, 0, 0, 0), &range),
         Some(date(2025, 1, 2).at(1, 30, 0, 0))
     );
 
     assert_eq!(
-        ts.closest_to(date(2025, 1, 1).at(1, 30, 0, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(1, 30, 0, 0), &range),
         Some(date(2025, 1, 1).at(1, 30, 0, 0))
     );
 }
 
 #[test]
-fn timespec_closest_to_datetime_max() {
+fn cron_closest_to_datetime_max() {
     let range = DateTime::MIN..DateTime::MAX;
-    let interval = TimeSpec::new().hour(1).minute(30).second(0);
+    let pattern = Cron::new().hour(1).minute(30).second(0);
 
     assert_eq!(
-        interval.closest_to(DateTime::MAX, &range),
+        pattern.closest_to(DateTime::MAX, &range),
         Some(date(9999, 12, 31).at(1, 30, 0, 0))
     );
 }
