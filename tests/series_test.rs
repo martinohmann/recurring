@@ -285,3 +285,60 @@ fn series_get_closest_event() {
         Some(Event::at(datetime(9999, 12, 31, 23, 0, 0, 0)))
     );
 }
+
+#[test]
+fn series_overlapping_last_event() {
+    let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    let end = date(2025, 2, 1).at(0, 0, 0, 0);
+    let series = Series::new(start..end, daily(1))
+        .with()
+        .event_duration(50.hours())
+        .build()
+        .unwrap();
+
+    assert_eq!(series.end(), date(2025, 1, 29).at(22, 0, 0, 0));
+    assert_eq!(
+        series.last_event(),
+        Some(
+            Event::new(
+                date(2025, 1, 29).at(0, 0, 0, 0),
+                date(2025, 1, 31).at(2, 0, 0, 0)
+            )
+            .unwrap()
+        )
+    );
+}
+
+#[test]
+fn series_event_durations() {
+    let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    let end = date(2025, 2, 1).at(0, 0, 0, 0);
+    let series = Series::new(start..end, daily(1));
+
+    assert!(
+        series
+            .clone()
+            .with()
+            .event_duration(30.days().hours(23).minutes(59).seconds(59).nanoseconds(999))
+            .build()
+            .is_ok()
+    );
+
+    assert!(
+        series
+            .clone()
+            .with()
+            .event_duration(1.month())
+            .build()
+            .is_err()
+    );
+
+    assert!(
+        series
+            .clone()
+            .with()
+            .event_duration(1.year())
+            .build()
+            .is_err()
+    );
+}

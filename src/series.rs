@@ -128,6 +128,9 @@ where
     }
 
     /// Returns the range from series start (inclusive) to series end (exclusive).
+    ///
+    /// If the series has a non-zero event duration configured, the returned range will end at
+    /// `initial_end - event_duration`.
     pub fn range(&self) -> &Range<DateTime> {
         &self.range
     }
@@ -142,7 +145,10 @@ where
     /// Returns the `DateTime` at which the series ends (exclusive).
     ///
     /// Don't confuse this with the time of the last event in the series. It is merely an upper
-    /// bound until which the series will yield events.
+    /// bound until after which the series will stop yielding events.
+    ///
+    /// If the series has a non-zero event duration configured, this will return `initial_end -
+    /// event_duration`.
     pub fn end(&self) -> DateTime {
         self.range.end
     }
@@ -578,6 +584,9 @@ where
     /// If `.event_duration()` is not called with a custom value, events will not have an end
     /// datetime.
     ///
+    /// The event duration may be longer than the time between the dates produces by the recurrence
+    /// pattern, in which case events will overlap.
+    ///
     /// # Example
     ///
     /// ```
@@ -625,8 +634,9 @@ where
     ///
     /// # Errors
     ///
-    /// Returns an `Error` if the configured `end` is less than or equal to `start`, or if the
-    /// configured `event_duration` is negative.
+    /// Returns an `Error` if the configured `end` is less than or equal to `start`, if the
+    /// configured `event_duration` is negative, or if the `event_duration` greater or equal to the
+    /// range (`start..end`) of the series.
     ///
     /// # Example
     ///
@@ -642,13 +652,18 @@ where
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn build(self) -> Result<Series<P>, Error> {
-        let range = try_simplify_range(self.bounds)?;
-        if range.start >= range.end {
-            return Err(Error::from(ErrorKind::InvalidBounds));
-        }
+        let mut range = try_simplify_range(self.bounds)?;
 
         if self.event_duration.is_negative() {
             return Err(Error::from(ErrorKind::InvalidEventDuration));
+        }
+
+        if self.event_duration.is_positive() {
+            range.end = range.end.checked_sub(self.event_duration)?;
+        }
+
+        if range.start >= range.end {
+            return Err(Error::from(ErrorKind::InvalidBounds));
         }
 
         Ok(Series {
