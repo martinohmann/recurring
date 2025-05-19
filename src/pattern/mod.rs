@@ -4,7 +4,7 @@ mod combined;
 mod cron;
 mod daily;
 mod interval;
-mod timeunit;
+mod ranged;
 mod utils;
 
 pub use combined::Combined;
