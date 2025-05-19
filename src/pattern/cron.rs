@@ -1,5 +1,5 @@
 use super::timeunit::{Days, Hours, Minutes, Months, Seconds, Weekdays, Years};
-use crate::{Pattern, private};
+use crate::{Error, Pattern, private};
 use core::ops::Range;
 use jiff::ToSpan;
 use jiff::civil::{DateTime, Weekday};
@@ -88,30 +88,36 @@ pub struct Cron {
     seconds: Seconds,
 }
 
-// Builder methods
 impl Cron {
     /// Create a new `Cron` that ticks every second.
     pub fn new() -> Cron {
         Cron::default()
     }
+}
 
+// Panicking builder methods.
+impl Cron {
     /// Limit the pattern to a specific year.
     ///
     /// This method can be called multiple times to limit the pattern to multiple different
     /// years. Alternatively, you can use [`.years()`][Cron::years] to feed years from an
     /// iterator.
     ///
+    /// The fallible version of this method is [`Cron::try_year`].
+    ///
     /// # Panics
     ///
     /// This panics when the year is too small or too big. The minimum value is `-9999`. The
     /// maximum value is `9999`.
     #[must_use]
-    pub fn year(mut self, year: i16) -> Cron {
-        self.years.insert(year);
-        self
+    pub fn year(self, year: i16) -> Cron {
+        self.try_year(year)
+            .expect("value for year is out of bounds")
     }
 
     /// Limit the years in the pattern to every `step`'s year from `start` onwards.
+    ///
+    /// The fallible version of this method is [`Cron::try_year_step_by`].
     ///
     /// # Panics
     ///
@@ -119,10 +125,13 @@ impl Cron {
     /// minimum start value is `-9999`. The maximum start value is `9999`.
     #[must_use]
     pub fn year_step_by(self, start: i16, step: usize) -> Cron {
-        (start..=Years::MAX).step_by(step).fold(self, Cron::year)
+        self.try_year_step_by(start, step)
+            .expect("value for year step is out of bounds")
     }
 
     /// Limit the years in the pattern to specific values from an iterator.
+    ///
+    /// The fallible version of this method is [`Cron::try_years`].
     ///
     /// # Panics
     ///
@@ -130,7 +139,8 @@ impl Cron {
     /// or too big. The minimum value is `-9999`. The maximum value is `9999`.
     #[must_use]
     pub fn years<I: IntoIterator<Item = i16>>(self, years: I) -> Cron {
-        years.into_iter().fold(self, Cron::year)
+        self.try_years(years)
+            .expect("value for years is out of bounds")
     }
 
     /// Limit the pattern to a specific month.
@@ -139,17 +149,21 @@ impl Cron {
     /// months. Alternatively, you can use [`.months()`][Cron::months] to feed months from an
     /// iterator.
     ///
+    /// The fallible version of this method is [`Cron::try_month`].
+    ///
     /// # Panics
     ///
     /// This panics when the month is too small or too big. The minimum value is `1`. The maximum
     /// value is `12`.
     #[must_use]
-    pub fn month(mut self, month: i8) -> Cron {
-        self.months.insert(month);
-        self
+    pub fn month(self, month: i8) -> Cron {
+        self.try_month(month)
+            .expect("value for month is out of bounds")
     }
 
     /// Limit the months in the pattern to every `step`'s month from `start` onwards.
+    ///
+    /// The fallible version of this method is [`Cron::try_month_step_by`].
     ///
     /// # Panics
     ///
@@ -157,10 +171,13 @@ impl Cron {
     /// minimum start value is `1`. The maximum start value is `12`.
     #[must_use]
     pub fn month_step_by(self, start: i8, step: usize) -> Cron {
-        (start..=Months::MAX).step_by(step).fold(self, Cron::month)
+        self.try_month_step_by(start, step)
+            .expect("value for month step is out of bounds")
     }
 
     /// Limit the months in the pattern to specific values from an iterator.
+    ///
+    /// The fallible version of this method is [`Cron::try_months`].
     ///
     /// # Panics
     ///
@@ -168,7 +185,8 @@ impl Cron {
     /// or too big. The minimum value is `1`. The maximum value is `12`.
     #[must_use]
     pub fn months<I: IntoIterator<Item = i8>>(self, months: I) -> Cron {
-        months.into_iter().fold(self, Cron::month)
+        self.try_months(months)
+            .expect("value for months is out of bounds")
     }
 
     /// Limit the pattern to a specific weekday.
@@ -183,7 +201,9 @@ impl Cron {
 
     #[inline]
     fn weekday_i8(mut self, weekday: i8) -> Cron {
-        self.weekdays.insert(weekday);
+        self.weekdays
+            .try_insert(weekday)
+            .expect("weekday is out of bounds, please file a bug");
         self
     }
 
@@ -210,17 +230,20 @@ impl Cron {
     /// This method can be called multiple times to limit the pattern to multiple different days.
     /// Alternatively, you can use [`.days()`][Cron::days] to feed days from an iterator.
     ///
+    /// The fallible version of this method is [`Cron::try_day`].
+    ///
     /// # Panics
     ///
     /// This panics when the day is too small or too big. The minimum value is `1`. The maximum
     /// value is `31`.
     #[must_use]
-    pub fn day(mut self, day: i8) -> Cron {
-        self.days.insert(day);
-        self
+    pub fn day(self, day: i8) -> Cron {
+        self.try_day(day).expect("value for day is out of bounds")
     }
 
     /// Limit the days in the pattern to every `step`'s day from `start` onwards.
+    ///
+    /// The fallible version of this method is [`Cron::try_day_step_by`].
     ///
     /// # Panics
     ///
@@ -228,10 +251,13 @@ impl Cron {
     /// minimum start value is `1`. The maximum start value is `31`.
     #[must_use]
     pub fn day_step_by(self, start: i8, step: usize) -> Cron {
-        (start..=Days::MAX).step_by(step).fold(self, Cron::day)
+        self.try_day_step_by(start, step)
+            .expect("value for day step is out of bounds")
     }
 
     /// Limit the days in the pattern to specific values from an iterator.
+    ///
+    /// The fallible version of this method is [`Cron::try_days`].
     ///
     /// # Panics
     ///
@@ -239,7 +265,8 @@ impl Cron {
     /// or too big. The minimum value is `1`. The maximum value is `31`.
     #[must_use]
     pub fn days<I: IntoIterator<Item = i8>>(self, days: I) -> Cron {
-        days.into_iter().fold(self, Cron::day)
+        self.try_days(days)
+            .expect("value for days is out of bounds")
     }
 
     /// Limit the pattern to a specific hour.
@@ -247,17 +274,21 @@ impl Cron {
     /// This method can be called multiple times to limit the pattern to multiple different hours.
     /// Alternatively, you can use [`.hours()`][Cron::hours] to feed hours from an iterator.
     ///
+    /// The fallible version of this method is [`Cron::try_hour`].
+    ///
     /// # Panics
     ///
     /// This panics when the hour is too small or too big. The minimum value is `0`. The maximum
     /// value is `23`.
     #[must_use]
-    pub fn hour(mut self, hour: i8) -> Cron {
-        self.hours.insert(hour);
-        self
+    pub fn hour(self, hour: i8) -> Cron {
+        self.try_hour(hour)
+            .expect("value for hour is out of bounds")
     }
 
     /// Limit the hours in the pattern to every `step`'s hour from `start` onwards.
+    ///
+    /// The fallible version of this method is [`Cron::try_hour_step_by`].
     ///
     /// # Panics
     ///
@@ -265,10 +296,13 @@ impl Cron {
     /// minimum start value is `0`. The maximum start value is `23`.
     #[must_use]
     pub fn hour_step_by(self, start: i8, step: usize) -> Cron {
-        (start..=Hours::MAX).step_by(step).fold(self, Cron::hour)
+        self.try_hour_step_by(start, step)
+            .expect("value for hour step is out of bounds")
     }
 
     /// Limit the hours in the pattern to specific values from an iterator.
+    ///
+    /// The fallible version of this method is [`Cron::try_hours`].
     ///
     /// # Panics
     ///
@@ -276,7 +310,8 @@ impl Cron {
     /// or too big. The minimum value is `0`. The maximum value is `23`.
     #[must_use]
     pub fn hours<I: IntoIterator<Item = i8>>(self, hours: I) -> Cron {
-        hours.into_iter().fold(self, Cron::hour)
+        self.try_hours(hours)
+            .expect("value for hours is out of bounds")
     }
 
     /// Limit the pattern to a specific minute.
@@ -284,17 +319,21 @@ impl Cron {
     /// This method can be called multiple times to limit the pattern to multiple different minutes.
     /// Alternatively, you can use [`.minutes()`][Cron::minutes] to feed minutes from an iterator.
     ///
+    /// The fallible version of this method is [`Cron::try_minute`].
+    ///
     /// # Panics
     ///
     /// This panics when the minute is too small or too big. The minimum value is `0`. The maximum
     /// value is `59`.
     #[must_use]
-    pub fn minute(mut self, minute: i8) -> Cron {
-        self.minutes.insert(minute);
-        self
+    pub fn minute(self, minute: i8) -> Cron {
+        self.try_minute(minute)
+            .expect("value for minute is out of bounds")
     }
 
     /// Limit the minutes in the pattern to every `step`'s minute from `start` onwards.
+    ///
+    /// The fallible version of this method is [`Cron::try_minute_step_by`].
     ///
     /// # Panics
     ///
@@ -302,12 +341,13 @@ impl Cron {
     /// minimum start value is `0`. The maximum start value is `59`.
     #[must_use]
     pub fn minute_step_by(self, start: i8, step: usize) -> Cron {
-        (start..=Minutes::MAX)
-            .step_by(step)
-            .fold(self, Cron::minute)
+        self.try_minute_step_by(start, step)
+            .expect("value for minute step is out of bounds")
     }
 
     /// Limit the minutes in the pattern to specific values from an iterator.
+    ///
+    /// The fallible version of this method is [`Cron::try_minutes`].
     ///
     /// # Panics
     ///
@@ -315,7 +355,8 @@ impl Cron {
     /// or too big. The minimum value is `0`. The maximum value is `59`.
     #[must_use]
     pub fn minutes<I: IntoIterator<Item = i8>>(self, minutes: I) -> Cron {
-        minutes.into_iter().fold(self, Cron::minute)
+        self.try_minutes(minutes)
+            .expect("value for minutes is out of bounds")
     }
 
     /// Limit the pattern to a specific second.
@@ -323,17 +364,21 @@ impl Cron {
     /// This method can be called multiple times to limit the pattern to multiple different seconds.
     /// Alternatively, you can use [`.seconds()`][Cron::seconds] to feed seconds from an iterator.
     ///
+    /// The fallible version of this method is [`Cron::try_second`].
+    ///
     /// # Panics
     ///
     /// This panics when the second is too small or too big. The minimum value is `0`. The maximum
     /// value is `59`.
     #[must_use]
-    pub fn second(mut self, second: i8) -> Cron {
-        self.seconds.insert(second);
-        self
+    pub fn second(self, second: i8) -> Cron {
+        self.try_second(second)
+            .expect("value for second is out of bounds")
     }
 
     /// Limit the seconds in the pattern to every `step`'s second from `start` onwards.
+    ///
+    /// The fallible version of this method is [`Cron::try_second_step_by`].
     ///
     /// # Panics
     ///
@@ -341,12 +386,13 @@ impl Cron {
     /// minimum start value is `0`. The maximum start value is `59`.
     #[must_use]
     pub fn second_step_by(self, start: i8, step: usize) -> Cron {
-        (start..=Seconds::MAX)
-            .step_by(step)
-            .fold(self, Cron::second)
+        self.try_second_step_by(start, step)
+            .expect("value for seconds step is out of bounds")
     }
 
     /// Limit the seconds in the pattern to specific values from an iterator.
+    ///
+    /// The fallible version of this method is [`Cron::try_seconds`].
     ///
     /// # Panics
     ///
@@ -354,7 +400,288 @@ impl Cron {
     /// or too big. The minimum value is `0`. The maximum value is `59`.
     #[must_use]
     pub fn seconds<I: IntoIterator<Item = i8>>(self, seconds: I) -> Cron {
-        seconds.into_iter().fold(self, Cron::second)
+        self.try_seconds(seconds)
+            .expect("value for seconds is out of bounds")
+    }
+}
+
+// Fallible builder methods.
+impl Cron {
+    /// Limit the pattern to a specific year.
+    ///
+    /// This method can be called multiple times to limit the pattern to multiple different years.
+    /// Alternatively, you can use [`.try_years()`][Cron::try_years] to feed years from an
+    /// iterator.
+    ///
+    /// The panicking version of this method is [`Cron::year`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when the year is too small or too big. The minimum value is `-9999`.
+    /// The maximum value is `9999`.
+    pub fn try_year(mut self, year: i16) -> Result<Cron, Error> {
+        self.years.try_insert(year)?;
+        Ok(self)
+    }
+
+    /// Limit the years in the pattern to every `step`'s year from `start` onwards.
+    ///
+    /// # Errors
+    ///
+    /// The returns an error if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `-9999`. The maximum start value is `9999`.
+    ///
+    /// The panicking version of this method is [`Cron::year_step_by`].
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0`.
+    pub fn try_year_step_by(self, start: i16, step: usize) -> Result<Cron, Error> {
+        (start..=Years::MAX)
+            .step_by(step)
+            .try_fold(self, Cron::try_year)
+    }
+
+    /// Limit the years in the pattern to specific values from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::years`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when any of the year values produced by the iterator is too small or
+    /// too big. The minimum value is `-9999`. The maximum value is `9999`.
+    pub fn try_years<I: IntoIterator<Item = i16>>(self, years: I) -> Result<Cron, Error> {
+        years.into_iter().try_fold(self, Cron::try_year)
+    }
+
+    /// Limit the pattern to a specific month.
+    ///
+    /// This method can be called multiple times to limit the pattern to multiple different months.
+    /// Alternatively, you can use [`.months()`][Cron::months] to feed months from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::month`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when the month is too small or too big. The minimum value is `1`.
+    /// The maximum value is `12`.
+    pub fn try_month(mut self, month: i8) -> Result<Cron, Error> {
+        self.months.try_insert(month)?;
+        Ok(self)
+    }
+
+    /// Limit the months in the pattern to every `step`'s month from `start` onwards.
+    ///
+    /// The panicking version of this method is [`Cron::month_step_by`].
+    ///
+    /// # Errors
+    ///
+    /// The returns an error if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `1`. The maximum start value is `12`.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0`.
+    pub fn try_month_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
+        (start..=Months::MAX)
+            .step_by(step)
+            .try_fold(self, Cron::try_month)
+    }
+
+    /// Limit the months in the pattern to specific values from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::months`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when any of the month values produced by the iterator is month is
+    /// too small or too big. The minimum value is `1`. The maximum value is `12`.
+    pub fn try_months<I: IntoIterator<Item = i8>>(self, months: I) -> Result<Cron, Error> {
+        months.into_iter().try_fold(self, Cron::try_month)
+    }
+
+    /// Limit the pattern to a specific day.
+    ///
+    /// This method can be called multiple times to limit the pattern to multiple different days.
+    /// Alternatively, you can use [`.days()`][Cron::days] to feed days from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::day`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when the day is too small or too big. The minimum value is `1`.
+    /// The maximum value is `31`.
+    pub fn try_day(mut self, day: i8) -> Result<Cron, Error> {
+        self.days.try_insert(day)?;
+        Ok(self)
+    }
+
+    /// Limit the days in the pattern to every `step`'s day from `start` onwards.
+    ///
+    /// The panicking version of this method is [`Cron::day_step_by`].
+    ///
+    /// # Errors
+    ///
+    /// The returns an error if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `1`. The maximum start value is `31`.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0`.
+    pub fn try_day_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
+        (start..=Days::MAX)
+            .step_by(step)
+            .try_fold(self, Cron::try_day)
+    }
+
+    /// Limit the days in the pattern to specific values from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::days`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when any of the day values produced by the iterator is day is
+    /// too small or too big. The minimum value is `1`. The maximum value is `31`.
+    pub fn try_days<I: IntoIterator<Item = i8>>(self, days: I) -> Result<Cron, Error> {
+        days.into_iter().try_fold(self, Cron::try_day)
+    }
+
+    /// Limit the pattern to a specific hour.
+    ///
+    /// The panicking version of this method is [`Cron::hour`].
+    ///
+    /// This method can be called multiple times to limit the pattern to multiple different hours.
+    /// Alternatively, you can use [`.hours()`][Cron::hours] to feed hours from an iterator.
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when the hour is too small or too big. The minimum value is `0`.
+    /// The maximum value is `23`.
+    pub fn try_hour(mut self, hour: i8) -> Result<Cron, Error> {
+        self.hours.try_insert(hour)?;
+        Ok(self)
+    }
+
+    /// Limit the hours in the pattern to every `step`'s hour from `start` onwards.
+    ///
+    /// The panicking version of this method is [`Cron::hour_step_by`].
+    ///
+    /// # Errors
+    ///
+    /// The returns an error if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `0`. The maximum start value is `23`.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0`.
+    pub fn try_hour_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
+        (start..=Hours::MAX)
+            .step_by(step)
+            .try_fold(self, Cron::try_hour)
+    }
+
+    /// Limit the hours in the pattern to specific values from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::hours`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when any of the hour values produced by the iterator is hour is
+    /// too small or too big. The minimum value is `0`. The maximum value is `23`.
+    pub fn try_hours<I: IntoIterator<Item = i8>>(self, hours: I) -> Result<Cron, Error> {
+        hours.into_iter().try_fold(self, Cron::try_hour)
+    }
+
+    /// Limit the pattern to a specific minute.
+    ///
+    /// This method can be called multiple times to limit the pattern to multiple different minutes.
+    /// Alternatively, you can use [`.minutes()`][Cron::minutes] to feed minutes from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::minute`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when the minute is too small or too big. The minimum value is `0`.
+    /// The maximum value is `59`.
+    pub fn try_minute(mut self, minute: i8) -> Result<Cron, Error> {
+        self.minutes.try_insert(minute)?;
+        Ok(self)
+    }
+
+    /// Limit the minutes in the pattern to every `step`'s minute from `start` onwards.
+    ///
+    /// The panicking version of this method is [`Cron::minute_step_by`].
+    ///
+    /// # Errors
+    ///
+    /// The returns an error if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `0`. The maximum start value is `59`.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0`.
+    pub fn try_minute_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
+        (start..=Minutes::MAX)
+            .step_by(step)
+            .try_fold(self, Cron::try_minute)
+    }
+
+    /// Limit the minutes in the pattern to specific values from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::minutes`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when any of the minute values produced by the iterator is minute is
+    /// too small or too big. The minimum value is `0`. The maximum value is `59`.
+    pub fn try_minutes<I: IntoIterator<Item = i8>>(self, minutes: I) -> Result<Cron, Error> {
+        minutes.into_iter().try_fold(self, Cron::try_minute)
+    }
+
+    /// Limit the pattern to a specific second.
+    ///
+    /// This method can be called multiple times to limit the pattern to multiple different seconds.
+    /// Alternatively, you can use [`.seconds()`][Cron::seconds] to feed seconds from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::second`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when the second is too small or too big. The minimum value is `0`.
+    /// The maximum value is `59`.
+    pub fn try_second(mut self, second: i8) -> Result<Cron, Error> {
+        self.seconds.try_insert(second)?;
+        Ok(self)
+    }
+
+    /// Limit the seconds in the pattern to every `step`'s second from `start` onwards.
+    ///
+    /// The panicking version of this method is [`Cron::second_step_by`].
+    ///
+    /// # Errors
+    ///
+    /// The returns an error if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `0`. The maximum start value is `59`.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0`.
+    pub fn try_second_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
+        (start..=Seconds::MAX)
+            .step_by(step)
+            .try_fold(self, Cron::try_second)
+    }
+
+    /// Limit the seconds in the pattern to specific values from an iterator.
+    ///
+    /// The panicking version of this method is [`Cron::seconds`].
+    ///
+    /// # Errors
+    ///
+    /// This returns an error when any of the second values produced by the iterator is second is
+    /// too small or too big. The minimum value is `0`. The maximum value is `59`.
+    pub fn try_seconds<I: IntoIterator<Item = i8>>(self, seconds: I) -> Result<Cron, Error> {
+        seconds.into_iter().try_fold(self, Cron::try_second)
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::error::{Error, ErrorKind};
 use alloc::collections::btree_set::{self, BTreeSet};
 use core::ops::RangeInclusive;
 
@@ -31,9 +32,12 @@ impl<const MIN: i8, const MAX: i8> TimeUnits<MIN, MAX> {
         Self::MIN.max(*range.start())..=Self::MAX.min(*range.end())
     }
 
-    pub(super) fn insert(&mut self, value: i8) -> bool {
-        assert!(Self::full_range().contains(&value));
-        self.set.insert(value)
+    pub(super) fn try_insert(&mut self, value: i8) -> Result<bool, Error> {
+        if !Self::full_range().contains(&value) {
+            return Err(Error::from(ErrorKind::OutOfBounds));
+        }
+
+        Ok(self.set.insert(value))
     }
 
     pub(super) fn contains(&self, second: i8) -> bool {
@@ -100,9 +104,12 @@ impl Years {
         Self::MIN.max(*range.start())..=Self::MAX.min(*range.end())
     }
 
-    pub(super) fn insert(&mut self, value: i16) -> bool {
-        assert!(Self::full_range().contains(&value));
-        self.set.insert(value)
+    pub(super) fn try_insert(&mut self, value: i16) -> Result<bool, Error> {
+        if !Self::full_range().contains(&value) {
+            return Err(Error::from(ErrorKind::OutOfBounds));
+        }
+
+        Ok(self.set.insert(value))
     }
 
     pub(super) fn range(&self, range: RangeInclusive<i16>) -> YearRange<'_> {
