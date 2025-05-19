@@ -1,4 +1,4 @@
-use super::timeunit::{Days, Hours, Minutes, Months, Seconds, Weekdays, Years};
+use super::ranged::{Days, Hours, Minutes, Months, Seconds, Weekdays, Years};
 use crate::{Error, Pattern, private};
 use core::ops::Range;
 use jiff::ToSpan;
