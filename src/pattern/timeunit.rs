@@ -2,146 +2,117 @@ use crate::error::{Error, ErrorKind};
 use alloc::collections::btree_set::{self, BTreeSet};
 use core::ops::RangeInclusive;
 
-pub(super) type Weekdays = TimeUnits<1, 7>;
-pub(super) type Months = TimeUnits<1, 12>;
-pub(super) type Days = TimeUnits<1, 31>;
-pub(super) type Hours = TimeUnits<0, 23>;
-pub(super) type Minutes = TimeUnits<0, 59>;
-pub(super) type Seconds = TimeUnits<0, 59>;
+pub(super) type Years = RangedI16Set<-9999, 9999>;
+pub(super) type Months = RangedI8Set<1, 12>;
+pub(super) type Weekdays = RangedI8Set<1, 7>;
+pub(super) type Days = RangedI8Set<1, 31>;
+pub(super) type Hours = RangedI8Set<0, 23>;
+pub(super) type Minutes = RangedI8Set<0, 59>;
+pub(super) type Seconds = RangedI8Set<0, 59>;
 
-/// A bounded set of time units.
+/// A ranged set of i8 values.
 ///
-/// The `Default` value of this type contains the full range of possible time units between `MIN`
+/// The `Default` value of this type contains the full range of possible values between `MIN`
 /// (inclusive) and `MAX` (inclusive).
 #[derive(Debug, Clone, Default)]
-pub(super) struct TimeUnits<const MIN: i8, const MAX: i8> {
-    set: BTreeSet<i8>,
-}
+pub(super) struct RangedI8Set<const MIN: i8, const MAX: i8>(BTreeSet<i8>);
 
-impl<const MIN: i8, const MAX: i8> TimeUnits<MIN, MAX> {
+impl<const MIN: i8, const MAX: i8> RangedI8Set<MIN, MAX> {
     pub(super) const MIN: i8 = MIN;
     pub(super) const MAX: i8 = MAX;
 
     #[inline]
-    const fn full_range() -> RangeInclusive<i8> {
-        Self::MIN..=Self::MAX
-    }
-
-    #[inline]
-    fn clamp_to_bounds(range: RangeInclusive<i8>) -> RangeInclusive<i8> {
-        Self::MIN.max(*range.start())..=Self::MAX.min(*range.end())
+    fn is_within_bounds(value: i8) -> bool {
+        (Self::MIN..=Self::MAX).contains(&value)
     }
 
     pub(super) fn try_insert(&mut self, value: i8) -> Result<bool, Error> {
-        if !Self::full_range().contains(&value) {
-            return Err(Error::from(ErrorKind::OutOfBounds));
-        }
-
-        Ok(self.set.insert(value))
-    }
-
-    pub(super) fn contains(&self, second: i8) -> bool {
-        if self.set.is_empty() {
-            Self::full_range().contains(&second)
+        if Self::is_within_bounds(value) {
+            Ok(self.0.insert(value))
         } else {
-            self.set.contains(&second)
+            Err(Error::from(ErrorKind::OutOfBounds))
         }
     }
 
-    pub(super) fn range(&self, range: RangeInclusive<i8>) -> TimeUnitRange<'_> {
-        if self.set.is_empty() {
-            TimeUnitRange::Range(Self::clamp_to_bounds(range))
+    pub(super) fn contains(&self, value: i8) -> bool {
+        if self.0.is_empty() {
+            Self::is_within_bounds(value)
         } else {
-            TimeUnitRange::Set(self.set.range(range))
+            self.0.contains(&value)
+        }
+    }
+
+    pub(super) fn range(&self, range: RangeInclusive<i8>) -> RangeIter<'_, i8> {
+        if self.0.is_empty() {
+            let (start, end) = range.into_inner();
+            RangeIter::Range(start.max(Self::MIN)..=end.min(Self::MAX))
+        } else {
+            RangeIter::SetRange(self.0.range(range))
         }
     }
 }
 
-pub(super) enum TimeUnitRange<'a> {
-    Range(RangeInclusive<i8>),
-    Set(btree_set::Range<'a, i8>),
-}
-
-impl Iterator for TimeUnitRange<'_> {
-    type Item = i8;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            TimeUnitRange::Range(range) => range.next(),
-            TimeUnitRange::Set(iter) => iter.next().copied(),
-        }
-    }
-}
-
-impl DoubleEndedIterator for TimeUnitRange<'_> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        match self {
-            TimeUnitRange::Range(range) => range.next_back(),
-            TimeUnitRange::Set(iter) => iter.next_back().copied(),
-        }
-    }
-}
-
-/// A bounded set of years.
+/// A ranged set of i16 values.
 ///
-/// The `Default` value of this type contains the full range of possible years.
+/// The `Default` value of this type contains the full range of possible values between `MIN`
+/// (inclusive) and `MAX` (inclusive).
 #[derive(Debug, Clone, Default)]
-pub(super) struct Years {
-    set: BTreeSet<i16>,
-}
+pub(super) struct RangedI16Set<const MIN: i16, const MAX: i16>(BTreeSet<i16>);
 
-impl Years {
-    pub(super) const MIN: i16 = -9999;
-    pub(super) const MAX: i16 = 9999;
+impl<const MIN: i16, const MAX: i16> RangedI16Set<MIN, MAX> {
+    pub(super) const MIN: i16 = MIN;
+    pub(super) const MAX: i16 = MAX;
 
     #[inline]
-    const fn full_range() -> RangeInclusive<i16> {
-        Self::MIN..=Self::MAX
-    }
-
-    #[inline]
-    fn clamp_to_bounds(range: RangeInclusive<i16>) -> RangeInclusive<i16> {
-        Self::MIN.max(*range.start())..=Self::MAX.min(*range.end())
+    fn is_within_bounds(value: i16) -> bool {
+        (Self::MIN..=Self::MAX).contains(&value)
     }
 
     pub(super) fn try_insert(&mut self, value: i16) -> Result<bool, Error> {
-        if !Self::full_range().contains(&value) {
-            return Err(Error::from(ErrorKind::OutOfBounds));
-        }
-
-        Ok(self.set.insert(value))
-    }
-
-    pub(super) fn range(&self, range: RangeInclusive<i16>) -> YearRange<'_> {
-        if self.set.is_empty() {
-            YearRange::Range(Self::clamp_to_bounds(range))
+        if Self::is_within_bounds(value) {
+            Ok(self.0.insert(value))
         } else {
-            YearRange::Set(self.set.range(range))
+            Err(Error::from(ErrorKind::OutOfBounds))
+        }
+    }
+
+    pub(super) fn range(&self, range: RangeInclusive<i16>) -> RangeIter<'_, i16> {
+        if self.0.is_empty() {
+            let (start, end) = range.into_inner();
+            RangeIter::Range(start.max(Self::MIN)..=end.min(Self::MAX))
+        } else {
+            RangeIter::SetRange(self.0.range(range))
         }
     }
 }
 
-pub(super) enum YearRange<'a> {
-    Range(RangeInclusive<i16>),
-    Set(btree_set::Range<'a, i16>),
+pub(super) enum RangeIter<'a, T> {
+    Range(RangeInclusive<T>),
+    SetRange(btree_set::Range<'a, T>),
 }
 
-impl Iterator for YearRange<'_> {
-    type Item = i16;
+impl<T: Copy> Iterator for RangeIter<'_, T>
+where
+    RangeInclusive<T>: Iterator<Item = T>,
+{
+    type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            YearRange::Range(range) => range.next(),
-            YearRange::Set(iter) => iter.next().copied(),
+            RangeIter::Range(range) => range.next(),
+            RangeIter::SetRange(iter) => iter.next().copied(),
         }
     }
 }
 
-impl DoubleEndedIterator for YearRange<'_> {
+impl<T: Copy> DoubleEndedIterator for RangeIter<'_, T>
+where
+    RangeInclusive<T>: DoubleEndedIterator<Item = T>,
+{
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
-            YearRange::Range(range) => range.next_back(),
-            YearRange::Set(iter) => iter.next_back().copied(),
+            RangeIter::Range(range) => range.next_back(),
+            RangeIter::SetRange(iter) => iter.next_back().copied(),
         }
     }
 }
