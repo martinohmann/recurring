@@ -111,6 +111,17 @@ impl Cron {
         self
     }
 
+    /// Limit the years in the pattern to every `step`'s year from `start` onwards.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `-9999`. The maximum start value is `9999`.
+    #[must_use]
+    pub fn year_step_by(self, start: i16, step: usize) -> Cron {
+        (start..=Years::MAX).step_by(step).fold(self, Cron::year)
+    }
+
     /// Limit the years in the pattern to specific values from an iterator.
     ///
     /// # Panics
@@ -138,6 +149,17 @@ impl Cron {
         self
     }
 
+    /// Limit the months in the pattern to every `step`'s month from `start` onwards.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `1`. The maximum start value is `12`.
+    #[must_use]
+    pub fn month_step_by(self, start: i8, step: usize) -> Cron {
+        (start..=Months::MAX).step_by(step).fold(self, Cron::month)
+    }
+
     /// Limit the months in the pattern to specific values from an iterator.
     ///
     /// # Panics
@@ -155,9 +177,26 @@ impl Cron {
     /// weekdays. Alternatively, you can use [`.weekdays()`][Cron::weekdays] to feed weekdays
     /// from an iterator.
     #[must_use]
-    pub fn weekday(mut self, weekday: Weekday) -> Cron {
-        self.weekdays.insert(weekday.to_monday_one_offset());
+    pub fn weekday(self, weekday: Weekday) -> Cron {
+        self.weekday_i8(weekday.to_monday_one_offset())
+    }
+
+    #[inline]
+    fn weekday_i8(mut self, weekday: i8) -> Cron {
+        self.weekdays.insert(weekday);
         self
+    }
+
+    /// Limit the weekdays in the pattern to every `step`'s weekday from `start` onwards.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0`.
+    #[must_use]
+    pub fn weekday_step_by(self, start: Weekday, step: usize) -> Cron {
+        (start.to_monday_one_offset()..=Weekdays::MAX)
+            .step_by(step)
+            .fold(self, Cron::weekday_i8)
     }
 
     /// Limit the weekdays in the pattern to specific values from an iterator.
@@ -179,6 +218,17 @@ impl Cron {
     pub fn day(mut self, day: i8) -> Cron {
         self.days.insert(day);
         self
+    }
+
+    /// Limit the days in the pattern to every `step`'s day from `start` onwards.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `1`. The maximum start value is `31`.
+    #[must_use]
+    pub fn day_step_by(self, start: i8, step: usize) -> Cron {
+        (start..=Days::MAX).step_by(step).fold(self, Cron::day)
     }
 
     /// Limit the days in the pattern to specific values from an iterator.
@@ -207,6 +257,17 @@ impl Cron {
         self
     }
 
+    /// Limit the hours in the pattern to every `step`'s hour from `start` onwards.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `0`. The maximum start value is `23`.
+    #[must_use]
+    pub fn hour_step_by(self, start: i8, step: usize) -> Cron {
+        (start..=Hours::MAX).step_by(step).fold(self, Cron::hour)
+    }
+
     /// Limit the hours in the pattern to specific values from an iterator.
     ///
     /// # Panics
@@ -233,6 +294,19 @@ impl Cron {
         self
     }
 
+    /// Limit the minutes in the pattern to every `step`'s minute from `start` onwards.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `0`. The maximum start value is `59`.
+    #[must_use]
+    pub fn minute_step_by(self, start: i8, step: usize) -> Cron {
+        (start..=Minutes::MAX)
+            .step_by(step)
+            .fold(self, Cron::minute)
+    }
+
     /// Limit the minutes in the pattern to specific values from an iterator.
     ///
     /// # Panics
@@ -257,6 +331,19 @@ impl Cron {
     pub fn second(mut self, second: i8) -> Cron {
         self.seconds.insert(second);
         self
+    }
+
+    /// Limit the seconds in the pattern to every `step`'s second from `start` onwards.
+    ///
+    /// # Panics
+    ///
+    /// The method will panic if the given step is `0` or if start is too small or too big. The
+    /// minimum start value is `0`. The maximum start value is `59`.
+    #[must_use]
+    pub fn second_step_by(self, start: i8, step: usize) -> Cron {
+        (start..=Seconds::MAX)
+            .step_by(step)
+            .fold(self, Cron::second)
     }
 
     /// Limit the seconds in the pattern to specific values from an iterator.

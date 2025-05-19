@@ -171,3 +171,41 @@ fn cron_closest_to_datetime_max() {
         Some(date(9999, 12, 31).at(1, 30, 0, 0))
     );
 }
+
+#[test]
+fn cron_step_by() {
+    let start = date(2025, 5, 11).at(12, 0, 0, 0);
+    let pattern = cron().hour_step_by(12, 4).minute_step_by(0, 30).second(0);
+
+    assert_eq!(
+        series_take(start.., pattern.clone(), 10),
+        vec![
+            Event::at(date(2025, 5, 11).at(12, 0, 0, 0)),
+            Event::at(date(2025, 5, 11).at(12, 30, 0, 0)),
+            Event::at(date(2025, 5, 11).at(16, 0, 0, 0)),
+            Event::at(date(2025, 5, 11).at(16, 30, 0, 0)),
+            Event::at(date(2025, 5, 11).at(20, 0, 0, 0)),
+            Event::at(date(2025, 5, 11).at(20, 30, 0, 0)),
+            Event::at(date(2025, 5, 12).at(12, 0, 0, 0)),
+            Event::at(date(2025, 5, 12).at(12, 30, 0, 0)),
+            Event::at(date(2025, 5, 12).at(16, 0, 0, 0)),
+            Event::at(date(2025, 5, 12).at(16, 30, 0, 0)),
+        ]
+    );
+
+    assert_eq!(
+        series_take_rev(start.., pattern, 10),
+        vec![
+            Event::at(date(9999, 12, 31).at(20, 30, 0, 0)),
+            Event::at(date(9999, 12, 31).at(20, 0, 0, 0)),
+            Event::at(date(9999, 12, 31).at(16, 30, 0, 0)),
+            Event::at(date(9999, 12, 31).at(16, 0, 0, 0)),
+            Event::at(date(9999, 12, 31).at(12, 30, 0, 0)),
+            Event::at(date(9999, 12, 31).at(12, 0, 0, 0)),
+            Event::at(date(9999, 12, 30).at(20, 30, 0, 0)),
+            Event::at(date(9999, 12, 30).at(20, 0, 0, 0)),
+            Event::at(date(9999, 12, 30).at(16, 30, 0, 0)),
+            Event::at(date(9999, 12, 30).at(16, 0, 0, 0)),
+        ]
+    );
+}
