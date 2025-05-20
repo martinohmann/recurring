@@ -26,7 +26,7 @@ pub struct Daily {
 impl Daily {
     /// Creates a new `Daily` from an interval of days.
     ///
-    /// For a fallible alternative see [`Daily::try_new`].
+    /// The fallible version of this method is [`Daily::try_new`].
     ///
     /// # Panics
     ///
@@ -48,7 +48,7 @@ impl Daily {
 
     /// Creates a new `Daily` from an interval of days.
     ///
-    /// For an infallible alternative that panics on invalid spans instead see [`Daily::new`].
+    /// The packicking version of this method is [`Daily::new`].
     ///
     /// # Errors
     ///

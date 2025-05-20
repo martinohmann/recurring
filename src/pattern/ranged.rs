@@ -1,4 +1,4 @@
-use crate::error::{Error, ErrorKind};
+use crate::error::Error;
 use alloc::collections::btree_set::{self, BTreeSet};
 use core::ops::RangeInclusive;
 
@@ -30,7 +30,7 @@ impl<const MIN: i8, const MAX: i8> RangedI8Set<MIN, MAX> {
         if Self::is_within_bounds(value) {
             Ok(self.0.insert(value))
         } else {
-            Err(Error::from(ErrorKind::OutOfBounds))
+            Err(Error::range(value, Self::MIN, Self::MAX))
         }
     }
 
@@ -72,7 +72,7 @@ impl<const MIN: i16, const MAX: i16> RangedI16Set<MIN, MAX> {
         if Self::is_within_bounds(value) {
             Ok(self.0.insert(value))
         } else {
-            Err(Error::from(ErrorKind::OutOfBounds))
+            Err(Error::range(value, Self::MIN, Self::MAX))
         }
     }
 

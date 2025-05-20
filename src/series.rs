@@ -1,4 +1,8 @@
-use crate::{Error, Event, IntoBounds, Pattern, error::ErrorKind, try_simplify_range};
+use crate::{
+    Event, IntoBounds, Pattern,
+    error::{Error, err},
+    try_simplify_range,
+};
 use core::ops::{Bound, Range, RangeBounds};
 use jiff::{Span, civil::DateTime};
 
@@ -39,7 +43,7 @@ where
     /// To configure more aspects of the series call `.with()` on the constructed
     /// `Series` value. See the documentation of [`Series::with`] for more details.
     ///
-    /// For a fallible alternative see [`Series::try_new`].
+    /// The fallible version of this method is [`Series::try_new`].
     ///
     /// # Panics
     ///
@@ -54,19 +58,9 @@ where
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     /// ```
+    #[inline]
     pub fn new<B: RangeBounds<DateTime>>(range: B, pattern: P) -> Series<P> {
-        let range = try_simplify_range(range).expect("range overflows DateTime::MAX");
-
-        assert!(
-            range.start < range.end,
-            "invalid bounds: end must be greater than start"
-        );
-
-        Series {
-            pattern,
-            range,
-            event_duration: Span::new(),
-        }
+        Series::try_new(range, pattern).expect("invalid series range bounds")
     }
 
     /// Creates a new `Series` that produces events within the provided `range` according to the
@@ -75,7 +69,7 @@ where
     /// To configure more aspects of the series call `.with()` on the constructed
     /// `Series` value. See the documentation of [`Series::with`] for more details.
     ///
-    /// For an infallible alternative that panics instead see [`Series::new`].
+    /// The packicking version of this method is [`Series::new`].
     ///
     /// # Errors
     ///
@@ -95,7 +89,7 @@ where
     pub fn try_new<B: RangeBounds<DateTime>>(range: B, pattern: P) -> Result<Series<P>, Error> {
         let range = try_simplify_range(range)?;
         if range.start >= range.end {
-            return Err(Error::from(ErrorKind::InvalidBounds));
+            return Err(Error::datetime_range("series", range));
         }
 
         Ok(Series {
@@ -442,7 +436,7 @@ where
     fn get_event_unchecked(&self, start: DateTime) -> Option<Event> {
         if self.event_duration.is_positive() {
             let end = start.checked_add(self.event_duration).ok()?;
-            Event::new(start, end).ok()
+            Some(Event::new_unchecked(start, end))
         } else {
             Some(Event::at(start))
         }
@@ -655,7 +649,10 @@ where
         let mut range = try_simplify_range(self.bounds)?;
 
         if self.event_duration.is_negative() {
-            return Err(Error::from(ErrorKind::InvalidEventDuration));
+            return Err(err!(
+                "event duration must be positive or zero but got {}",
+                self.event_duration
+            ));
         }
 
         if self.event_duration.is_positive() {
@@ -663,7 +660,7 @@ where
         }
 
         if range.start >= range.end {
-            return Err(Error::from(ErrorKind::InvalidBounds));
+            return Err(Error::datetime_range("series", range));
         }
 
         Ok(Series {

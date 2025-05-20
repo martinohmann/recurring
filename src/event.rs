@@ -1,4 +1,4 @@
-use crate::{Error, error::ErrorKind};
+use crate::error::Error;
 use core::fmt;
 use jiff::{Span, civil::DateTime};
 
@@ -42,6 +42,7 @@ impl Event {
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let event = Event::at(start);
     /// ```
+    #[inline]
     pub fn at(instant: DateTime) -> Event {
         Event {
             start: instant,
@@ -68,13 +69,20 @@ impl Event {
     /// ```
     pub fn new(start: DateTime, end: DateTime) -> Result<Event, Error> {
         if start >= end {
-            return Err(Error::from(ErrorKind::InvalidBounds));
+            return Err(Error::datetime_range("event", start..end));
         }
 
-        Ok(Event {
+        Ok(Event::new_unchecked(start, end))
+    }
+
+    /// Creates a new `Event` which spans from a `start` (inclusive) to an `end` (exclusive)
+    /// without checking that `end` is strictly greater than `start`.
+    #[inline]
+    pub(crate) fn new_unchecked(start: DateTime, end: DateTime) -> Event {
+        Event {
             start,
             end: Some(end),
-        })
+        }
     }
 
     /// Returns the `DateTime` at which the event starts.
