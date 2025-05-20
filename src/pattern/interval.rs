@@ -1,5 +1,9 @@
 use super::utils::{intervals_in_range_until, is_interval_boundary};
-use crate::{Error, Pattern, error::ErrorKind, private};
+use crate::{
+    Pattern,
+    error::{Error, err},
+    private,
+};
 use core::ops::Range;
 use jiff::{Span, civil::DateTime};
 
@@ -21,7 +25,7 @@ pub struct Interval {
 impl Interval {
     /// Creates a new `Interval` from a `Span`.
     ///
-    /// For a fallible alternative see [`Interval::try_new`].
+    /// The fallible version of this method is [`Interval::try_new`].
     ///
     /// # Panics
     ///
@@ -35,17 +39,14 @@ impl Interval {
     ///
     /// let every_two_hours = Interval::new(2.hours());
     /// ```
+    #[inline]
     pub fn new(span: Span) -> Interval {
-        assert!(
-            Interval::validate(span),
-            "interval must be positive, non-zero and not include sub-second units"
-        );
-        Interval { span }
+        Interval::try_new(span).expect("invalid interval span")
     }
 
     /// Creates a new `Interval` from a `Span`.
     ///
-    /// For an infallible alternative that panics on invalid spans instead see [`Interval::new`].
+    /// The packicking version of this method is [`Interval::new`].
     ///
     /// # Errors
     ///
@@ -65,7 +66,9 @@ impl Interval {
     /// ```
     pub fn try_new(span: Span) -> Result<Interval, Error> {
         if !Interval::validate(span) {
-            return Err(Error::from(ErrorKind::InvalidInterval));
+            return Err(err!(
+                "interval must be positive, non-zero and must not include sub-second units but got {span}"
+            ));
         }
 
         Ok(Interval { span })
