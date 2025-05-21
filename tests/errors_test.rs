@@ -15,7 +15,7 @@ fn event_errors() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
 
     assert_err!(
-        Event::new(start, start),
+        Event::try_new(start, start),
         "event end must be greater than start but got event range 2025-01-01T00:00:00..2025-01-01T00:00:00",
     );
 }

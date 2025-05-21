@@ -115,13 +115,13 @@ impl ToSeries for Event {
     /// let start = date.at(0, 0, 0, 0);
     /// let end = date.at(0, 30, 0, 0);
     ///
-    /// let event = Event::new(start, end)?;
+    /// let event = Event::new(start, end);
     /// let series = event.to_series(hourly(2))?;
     ///
     /// let mut events = series.iter();
     ///
-    /// assert_eq!(events.next(), Some(Event::new(date.at(0, 0, 0, 0), date.at(0, 30, 0, 0))?));
-    /// assert_eq!(events.next(), Some(Event::new(date.at(2, 0, 0, 0), date.at(2, 30, 0, 0))?));
+    /// assert_eq!(events.next(), Some(Event::new(date.at(0, 0, 0, 0), date.at(0, 30, 0, 0))));
+    /// assert_eq!(events.next(), Some(Event::new(date.at(2, 0, 0, 0), date.at(2, 30, 0, 0))));
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {

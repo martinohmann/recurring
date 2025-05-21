@@ -5,8 +5,8 @@ use jiff::{Span, civil::DateTime};
 /// Represents an event that happens at a given point in time and may span until an optional end
 /// datetime.
 ///
-/// Single instant events can be created via [`Event::at`], while [`Event::new`] can be used to
-/// construct events with an explict end.
+/// Single instant events can be created via [`Event::at`], while [`Event::new`] and
+/// [`Event::try_new`] can be used to construct events with an explict end.
 ///
 /// # Example
 ///
@@ -16,11 +16,10 @@ use jiff::{Span, civil::DateTime};
 ///
 /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
 /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
-/// let event = Event::new(start, end)?;
+/// let event = Event::new(start, end);
 /// assert_eq!(event.start(), start);
 /// assert_eq!(event.end(), Some(end));
 /// assert_eq!(event.duration().fieldwise(), 1.day());
-/// # Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Event {
@@ -52,6 +51,30 @@ impl Event {
 
     /// Creates a new `Event` which spans from a `start` (inclusive) to an `end` (exclusive).
     ///
+    /// The fallible version of this method is [`Event::try_new`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `start >= end`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jiff::civil::date;
+    /// use recurring::Event;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
+    /// let event = Event::new(start, end);
+    /// ```
+    pub fn new(start: DateTime, end: DateTime) -> Event {
+        Event::try_new(start, end).expect("invalid event end")
+    }
+
+    /// Creates a new `Event` which spans from a `start` (inclusive) to an `end` (exclusive).
+    ///
+    /// The packicking version of this method is [`Event::new`].
+    ///
     /// # Errors
     ///
     /// Returns and `Error` if `start >= end`.
@@ -64,10 +87,10 @@ impl Event {
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
-    /// let event = Event::new(start, end)?;
+    /// let event = Event::try_new(start, end)?;
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
-    pub fn new(start: DateTime, end: DateTime) -> Result<Event, Error> {
+    pub fn try_new(start: DateTime, end: DateTime) -> Result<Event, Error> {
         if start >= end {
             return Err(Error::datetime_range("event", start..end));
         }
@@ -114,9 +137,8 @@ impl Event {
     /// assert!(event.end().is_none());
     ///
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
-    /// let event = Event::new(start, end)?;
+    /// let event = Event::new(start, end);
     /// assert_eq!(event.end(), Some(end));
-    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn end(&self) -> Option<DateTime> {
         self.end
@@ -137,9 +159,8 @@ impl Event {
     /// assert!(event.duration().is_zero());
     ///
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
-    /// let event = Event::new(start, end)?;
+    /// let event = Event::new(start, end);
     /// assert_eq!(event.duration().fieldwise(), 1.day());
-    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn duration(&self) -> Span {
         self.end
@@ -164,14 +185,13 @@ impl Event {
     /// assert!(!event.contains(start + 1.nanosecond()));
     ///
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
-    /// let event = Event::new(start, end)?;
+    /// let event = Event::new(start, end);
     /// assert!(!event.contains(start - 1.nanosecond()));
     /// assert!(event.contains(start));
     /// assert!(event.contains(start + 1.nanosecond()));
     /// assert!(event.contains(end - 1.nanosecond()));
     /// assert!(!event.contains(end));
     /// assert!(!event.contains(end + 1.nanosecond()));
-    /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn contains(&self, instant: DateTime) -> bool {
         if let Some(end) = self.end {
@@ -203,7 +223,7 @@ mod tests {
     fn event_end_before_start() {
         let start = date(2025, 1, 2).at(0, 0, 0, 0);
         let end = date(2025, 1, 1).at(0, 0, 0, 0);
-        assert!(Event::new(start, end).is_err());
+        assert!(Event::try_new(start, end).is_err());
     }
 
     #[test]
@@ -217,7 +237,6 @@ mod tests {
                 date(2025, 1, 1).at(0, 0, 0, 0),
                 date(2025, 1, 1).at(12, 0, 0, 0)
             )
-            .unwrap()
             .to_string(),
             "2025-01-01T00:00:00 - 2025-01-01T12:00:00"
         );

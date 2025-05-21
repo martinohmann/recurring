@@ -287,7 +287,7 @@ where
     /// );
     /// assert_eq!(
     ///     series.get_event_containing(series_start),
-    ///     Some(Event::new(series_start, series_start + 30.minutes())?),
+    ///     Some(Event::new(series_start, series_start + 30.minutes())),
     /// );
     /// assert_eq!(
     ///     series.get_event_containing(series_start + 31.minutes()),
@@ -295,7 +295,7 @@ where
     /// );
     /// assert_eq!(
     ///     series.get_event_containing(series_start + 1.hour().minutes(20)),
-    ///     Some(Event::new(series_start + 1.hour(), series_start + 1.hour().minutes(30))?),
+    ///     Some(Event::new(series_start + 1.hour(), series_start + 1.hour().minutes(30))),
     /// );
     /// assert_eq!(
     ///     series.get_event_containing(series_end),

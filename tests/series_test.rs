@@ -113,13 +113,11 @@ fn series_daily_with_end_and_duration() {
         Event::new(
             datetime(2025, 1, 1, 1, 1, 1, 0),
             datetime(2025, 1, 1, 2, 1, 1, 0),
-        )
-        .unwrap(),
+        ),
         Event::new(
             datetime(2025, 1, 3, 1, 1, 1, 0),
             datetime(2025, 1, 3, 2, 1, 1, 0),
-        )
-        .unwrap(),
+        ),
     ];
     assert_eq!(events, expected);
 }
@@ -191,24 +189,18 @@ fn series_get_event_containing() {
 
     assert_eq!(
         series.get_event_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
-        Some(
-            Event::new(
-                datetime(2025, 1, 1, 2, 2, 2, 2),
-                datetime(2025, 1, 1, 3, 2, 2, 2)
-            )
-            .unwrap()
-        )
+        Some(Event::new(
+            datetime(2025, 1, 1, 2, 2, 2, 2),
+            datetime(2025, 1, 1, 3, 2, 2, 2)
+        ))
     );
 
     assert_eq!(
         series.get_event_containing(datetime(2025, 1, 1, 3, 2, 2, 1)),
-        Some(
-            Event::new(
-                datetime(2025, 1, 1, 2, 2, 2, 2),
-                datetime(2025, 1, 1, 3, 2, 2, 2)
-            )
-            .unwrap()
-        )
+        Some(Event::new(
+            datetime(2025, 1, 1, 2, 2, 2, 2),
+            datetime(2025, 1, 1, 3, 2, 2, 2)
+        ))
     );
 
     assert_eq!(
@@ -299,13 +291,10 @@ fn series_overlapping_last_event() {
     assert_eq!(series.end(), date(2025, 1, 29).at(22, 0, 0, 0));
     assert_eq!(
         series.last_event(),
-        Some(
-            Event::new(
-                date(2025, 1, 29).at(0, 0, 0, 0),
-                date(2025, 1, 31).at(2, 0, 0, 0)
-            )
-            .unwrap()
-        )
+        Some(Event::new(
+            date(2025, 1, 29).at(0, 0, 0, 0),
+            date(2025, 1, 31).at(2, 0, 0, 0)
+        ))
     );
 }
 
