@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 use jiff::{ToSpan, civil::date};
 use pretty_assertions::assert_eq;
 use recurring::{

@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use core::{error, fmt, ops::Range};
 use jiff::{Error as JiffError, civil::DateTime};
 
@@ -20,7 +19,10 @@ pub(crate) use err;
 /// implementations.
 #[derive(Clone)]
 pub struct Error {
-    kind: Box<ErrorKind>,
+    #[cfg(feature = "alloc")]
+    kind: alloc::boxed::Box<ErrorKind>,
+    #[cfg(not(feature = "alloc"))]
+    kind: ErrorKind,
 }
 
 impl Error {
@@ -29,12 +31,13 @@ impl Error {
     /// An ad hoc error value is just an opaque string.
     #[inline(never)]
     #[cold]
-    pub(crate) fn adhoc(message: impl fmt::Display) -> Error {
-        Error::from(ErrorKind::Adhoc(AdhocError::from_display(message)))
+    pub(crate) fn adhoc(message: fmt::Arguments) -> Error {
+        Error::from(ErrorKind::Adhoc(AdhocError::from_args(message)))
     }
 
     /// Creates a new error indicating that a `given` value is out of the specified `min..=max`
     /// range.
+    #[cfg(feature = "alloc")]
     #[inline(never)]
     #[cold]
     pub(crate) fn range(given: impl Into<i64>, min: impl Into<i64>, max: impl Into<i64>) -> Error {
@@ -81,8 +84,15 @@ impl From<JiffError> for Error {
 
 impl From<ErrorKind> for Error {
     fn from(kind: ErrorKind) -> Self {
-        Error {
-            kind: Box::new(kind),
+        #[cfg(feature = "alloc")]
+        {
+            Error {
+                kind: alloc::boxed::Box::new(kind),
+            }
+        }
+        #[cfg(not(feature = "alloc"))]
+        {
+            Error { kind }
         }
     }
 }
@@ -94,6 +104,7 @@ enum ErrorKind {
     /// trait.
     Adhoc(AdhocError),
     /// An error that occurs when a number is not within its allowed range.
+    #[cfg_attr(not(feature = "alloc"), allow(dead_code))]
     Range(RangeError),
     /// Creates a new error indicating that the end of a datetime range is not strictly greater
     /// than its start.
@@ -116,18 +127,42 @@ impl fmt::Display for ErrorKind {
 /// A generic error message.
 #[derive(Clone)]
 struct AdhocError {
-    message: Box<str>,
+    #[cfg(feature = "alloc")]
+    message: alloc::boxed::Box<str>,
+    #[cfg(not(feature = "alloc"))]
+    message: &'static str,
 }
 
 impl AdhocError {
     /// Creates a new "ad hoc" error value.
     ///
     /// An ad hoc error value is just an opaque string.
+    #[cfg(feature = "alloc")]
     fn from_display(message: impl fmt::Display) -> AdhocError {
         use alloc::string::ToString;
         AdhocError {
             message: message.to_string().into_boxed_str(),
         }
+    }
+
+    fn from_args(message: fmt::Arguments) -> AdhocError {
+        #[cfg(feature = "alloc")]
+        {
+            AdhocError::from_display(message)
+        }
+        #[cfg(not(feature = "alloc"))]
+        {
+            let message = message.as_str().unwrap_or(
+                "unknown Recurring error (better error messages require \
+                 enabling the `alloc` feature for the `recurring` crate)",
+            );
+            AdhocError::from_static_str(message)
+        }
+    }
+
+    #[cfg(not(feature = "alloc"))]
+    fn from_static_str(message: &'static str) -> AdhocError {
+        AdhocError { message }
     }
 }
 
@@ -156,6 +191,7 @@ struct RangeError {
 impl RangeError {
     /// Creates a new error indicating that a `given` value is out of the specified `min..=max`
     /// range.
+    #[cfg(feature = "alloc")]
     fn new(given: impl Into<i64>, min: impl Into<i64>, max: impl Into<i64>) -> RangeError {
         RangeError {
             given: given.into(),

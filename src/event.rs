@@ -216,7 +216,6 @@ impl fmt::Display for Event {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::string::ToString;
     use jiff::civil::date;
     use pretty_assertions::assert_eq;
 
@@ -227,8 +226,10 @@ mod tests {
         assert!(Event::try_new(start, end).is_err());
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn event_display() {
+        use alloc::string::ToString;
         assert_eq!(
             Event::at(date(2025, 1, 1).at(0, 0, 0, 0)).to_string(),
             "2025-01-01T00:00:00"

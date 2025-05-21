@@ -3,6 +3,7 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::must_use_candidate)]
 
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
 mod error;
