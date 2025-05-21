@@ -1,5 +1,4 @@
 use crate::error::Error;
-use alloc::collections::btree_set::{self, BTreeSet};
 use core::ops::RangeInclusive;
 
 pub(super) type Years = RangedI16Set<-9999, 9999>;
@@ -10,12 +9,21 @@ pub(super) type Hours = RangedI8Set<0, 23>;
 pub(super) type Minutes = RangedI8Set<0, 59>;
 pub(super) type Seconds = RangedI8Set<0, 59>;
 
+#[cfg(feature = "alloc")]
+type Set<T> = alloc::collections::btree_set::BTreeSet<T>;
+#[cfg(feature = "alloc")]
+type SetRange<'a, T> = alloc::collections::btree_set::Range<'a, T>;
+#[cfg(not(feature = "alloc"))]
+type Set<T> = SingleValueSet<T>;
+#[cfg(not(feature = "alloc"))]
+type SetRange<'a, T> = SingleValueSetRange<'a, T>;
+
 /// A ranged set of i8 values.
 ///
 /// The `Default` value of this type contains the full range of possible values between `MIN`
 /// (inclusive) and `MAX` (inclusive).
 #[derive(Debug, Clone, Default)]
-pub(super) struct RangedI8Set<const MIN: i8, const MAX: i8>(BTreeSet<i8>);
+pub(super) struct RangedI8Set<const MIN: i8, const MAX: i8>(Set<i8>);
 
 impl<const MIN: i8, const MAX: i8> RangedI8Set<MIN, MAX> {
     pub(super) const MIN: i8 = MIN;
@@ -57,7 +65,7 @@ impl<const MIN: i8, const MAX: i8> RangedI8Set<MIN, MAX> {
 /// The `Default` value of this type contains the full range of possible values between `MIN`
 /// (inclusive) and `MAX` (inclusive).
 #[derive(Debug, Clone, Default)]
-pub(super) struct RangedI16Set<const MIN: i16, const MAX: i16>(BTreeSet<i16>);
+pub(super) struct RangedI16Set<const MIN: i16, const MAX: i16>(Set<i16>);
 
 impl<const MIN: i16, const MAX: i16> RangedI16Set<MIN, MAX> {
     pub(super) const MIN: i16 = MIN;
@@ -88,7 +96,7 @@ impl<const MIN: i16, const MAX: i16> RangedI16Set<MIN, MAX> {
 
 pub(super) enum RangeIter<'a, T> {
     Range(RangeInclusive<T>),
-    SetRange(btree_set::Range<'a, T>),
+    SetRange(SetRange<'a, T>),
 }
 
 impl<T: Copy> Iterator for RangeIter<'_, T>
@@ -114,5 +122,49 @@ where
             RangeIter::Range(range) => range.next_back(),
             RangeIter::SetRange(iter) => iter.next_back().copied(),
         }
+    }
+}
+
+/// Minimal set implementation that can only hold a single value.
+#[cfg(not(feature = "alloc"))]
+#[derive(Debug, Clone, Default)]
+struct SingleValueSet<T>(Option<T>);
+
+#[cfg(not(feature = "alloc"))]
+impl<T: Ord> SingleValueSet<T> {
+    fn insert(&mut self, value: T) -> bool {
+        self.0.replace(value).is_some()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_none()
+    }
+
+    fn contains(&self, value: &T) -> bool {
+        self.0.as_ref() == Some(value)
+    }
+
+    fn range(&self, range: RangeInclusive<T>) -> SingleValueSetRange<'_, T> {
+        SingleValueSetRange(self.0.as_ref().filter(|value| range.contains(value)))
+    }
+}
+
+/// Minimal set iterator implementation that can only yield a single value.
+#[cfg(not(feature = "alloc"))]
+pub(super) struct SingleValueSetRange<'a, T>(Option<&'a T>);
+
+#[cfg(not(feature = "alloc"))]
+impl<'a, T> Iterator for SingleValueSetRange<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.take()
+    }
+}
+
+#[cfg(not(feature = "alloc"))]
+impl<T> DoubleEndedIterator for SingleValueSetRange<'_, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0.take()
     }
 }

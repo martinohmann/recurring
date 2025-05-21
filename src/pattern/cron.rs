@@ -123,6 +123,7 @@ impl Cron {
     ///
     /// The method will panic if the given step is `0` or if start is too small or too big. The
     /// minimum start value is `-9999`. The maximum start value is `9999`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn year_step_by(self, start: i16, step: usize) -> Cron {
         self.try_year_step_by(start, step)
@@ -137,6 +138,7 @@ impl Cron {
     ///
     /// This panics when any of the year values produced by the iterator is year is too small
     /// or too big. The minimum value is `-9999`. The maximum value is `9999`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn years<I: IntoIterator<Item = i16>>(self, years: I) -> Cron {
         self.try_years(years)
@@ -169,6 +171,7 @@ impl Cron {
     ///
     /// The method will panic if the given step is `0` or if start is too small or too big. The
     /// minimum start value is `1`. The maximum start value is `12`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn month_step_by(self, start: i8, step: usize) -> Cron {
         self.try_month_step_by(start, step)
@@ -183,6 +186,7 @@ impl Cron {
     ///
     /// This panics when any of the month values produced by the iterator is month is too small
     /// or too big. The minimum value is `1`. The maximum value is `12`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn months<I: IntoIterator<Item = i8>>(self, months: I) -> Cron {
         self.try_months(months)
@@ -212,6 +216,7 @@ impl Cron {
     /// # Panics
     ///
     /// The method will panic if the given step is `0`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn weekday_step_by(self, start: Weekday, step: usize) -> Cron {
         (start.to_monday_one_offset()..=Weekdays::MAX)
@@ -220,6 +225,7 @@ impl Cron {
     }
 
     /// Limit the weekdays in the pattern to specific values from an iterator.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn weekdays<I: IntoIterator<Item = Weekday>>(self, weekdays: I) -> Cron {
         weekdays.into_iter().fold(self, Cron::weekday)
@@ -249,6 +255,7 @@ impl Cron {
     ///
     /// The method will panic if the given step is `0` or if start is too small or too big. The
     /// minimum start value is `1`. The maximum start value is `31`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn day_step_by(self, start: i8, step: usize) -> Cron {
         self.try_day_step_by(start, step)
@@ -263,6 +270,7 @@ impl Cron {
     ///
     /// This panics when any of the day values produced by the iterator is day is too small
     /// or too big. The minimum value is `1`. The maximum value is `31`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn days<I: IntoIterator<Item = i8>>(self, days: I) -> Cron {
         self.try_days(days)
@@ -294,6 +302,7 @@ impl Cron {
     ///
     /// The method will panic if the given step is `0` or if start is too small or too big. The
     /// minimum start value is `0`. The maximum start value is `23`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn hour_step_by(self, start: i8, step: usize) -> Cron {
         self.try_hour_step_by(start, step)
@@ -308,6 +317,7 @@ impl Cron {
     ///
     /// This panics when any of the hour values produced by the iterator is hour is too small
     /// or too big. The minimum value is `0`. The maximum value is `23`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn hours<I: IntoIterator<Item = i8>>(self, hours: I) -> Cron {
         self.try_hours(hours)
@@ -339,6 +349,7 @@ impl Cron {
     ///
     /// The method will panic if the given step is `0` or if start is too small or too big. The
     /// minimum start value is `0`. The maximum start value is `59`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn minute_step_by(self, start: i8, step: usize) -> Cron {
         self.try_minute_step_by(start, step)
@@ -353,6 +364,7 @@ impl Cron {
     ///
     /// This panics when any of the minute values produced by the iterator is minute is too small
     /// or too big. The minimum value is `0`. The maximum value is `59`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn minutes<I: IntoIterator<Item = i8>>(self, minutes: I) -> Cron {
         self.try_minutes(minutes)
@@ -384,6 +396,7 @@ impl Cron {
     ///
     /// The method will panic if the given step is `0` or if start is too small or too big. The
     /// minimum start value is `0`. The maximum start value is `59`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn second_step_by(self, start: i8, step: usize) -> Cron {
         self.try_second_step_by(start, step)
@@ -398,6 +411,7 @@ impl Cron {
     ///
     /// This panics when any of the second values produced by the iterator is second is too small
     /// or too big. The minimum value is `0`. The maximum value is `59`.
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn seconds<I: IntoIterator<Item = i8>>(self, seconds: I) -> Cron {
         self.try_seconds(seconds)
@@ -436,6 +450,7 @@ impl Cron {
     /// # Panics
     ///
     /// The method will panic if the given step is `0`.
+    #[cfg(feature = "alloc")]
     pub fn try_year_step_by(self, start: i16, step: usize) -> Result<Cron, Error> {
         (start..=Years::MAX)
             .step_by(step)
@@ -450,6 +465,7 @@ impl Cron {
     ///
     /// This returns an error when any of the year values produced by the iterator is too small or
     /// too big. The minimum value is `-9999`. The maximum value is `9999`.
+    #[cfg(feature = "alloc")]
     pub fn try_years<I: IntoIterator<Item = i16>>(self, years: I) -> Result<Cron, Error> {
         years.into_iter().try_fold(self, Cron::try_year)
     }
@@ -482,6 +498,7 @@ impl Cron {
     /// # Panics
     ///
     /// The method will panic if the given step is `0`.
+    #[cfg(feature = "alloc")]
     pub fn try_month_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
         (start..=Months::MAX)
             .step_by(step)
@@ -496,6 +513,7 @@ impl Cron {
     ///
     /// This returns an error when any of the month values produced by the iterator is month is
     /// too small or too big. The minimum value is `1`. The maximum value is `12`.
+    #[cfg(feature = "alloc")]
     pub fn try_months<I: IntoIterator<Item = i8>>(self, months: I) -> Result<Cron, Error> {
         months.into_iter().try_fold(self, Cron::try_month)
     }
@@ -528,6 +546,7 @@ impl Cron {
     /// # Panics
     ///
     /// The method will panic if the given step is `0`.
+    #[cfg(feature = "alloc")]
     pub fn try_day_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
         (start..=Days::MAX)
             .step_by(step)
@@ -542,6 +561,7 @@ impl Cron {
     ///
     /// This returns an error when any of the day values produced by the iterator is day is
     /// too small or too big. The minimum value is `1`. The maximum value is `31`.
+    #[cfg(feature = "alloc")]
     pub fn try_days<I: IntoIterator<Item = i8>>(self, days: I) -> Result<Cron, Error> {
         days.into_iter().try_fold(self, Cron::try_day)
     }
@@ -574,6 +594,7 @@ impl Cron {
     /// # Panics
     ///
     /// The method will panic if the given step is `0`.
+    #[cfg(feature = "alloc")]
     pub fn try_hour_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
         (start..=Hours::MAX)
             .step_by(step)
@@ -588,6 +609,7 @@ impl Cron {
     ///
     /// This returns an error when any of the hour values produced by the iterator is hour is
     /// too small or too big. The minimum value is `0`. The maximum value is `23`.
+    #[cfg(feature = "alloc")]
     pub fn try_hours<I: IntoIterator<Item = i8>>(self, hours: I) -> Result<Cron, Error> {
         hours.into_iter().try_fold(self, Cron::try_hour)
     }
@@ -620,6 +642,7 @@ impl Cron {
     /// # Panics
     ///
     /// The method will panic if the given step is `0`.
+    #[cfg(feature = "alloc")]
     pub fn try_minute_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
         (start..=Minutes::MAX)
             .step_by(step)
@@ -634,6 +657,7 @@ impl Cron {
     ///
     /// This returns an error when any of the minute values produced by the iterator is minute is
     /// too small or too big. The minimum value is `0`. The maximum value is `59`.
+    #[cfg(feature = "alloc")]
     pub fn try_minutes<I: IntoIterator<Item = i8>>(self, minutes: I) -> Result<Cron, Error> {
         minutes.into_iter().try_fold(self, Cron::try_minute)
     }
@@ -666,6 +690,7 @@ impl Cron {
     /// # Panics
     ///
     /// The method will panic if the given step is `0`.
+    #[cfg(feature = "alloc")]
     pub fn try_second_step_by(self, start: i8, step: usize) -> Result<Cron, Error> {
         (start..=Seconds::MAX)
             .step_by(step)
@@ -680,6 +705,7 @@ impl Cron {
     ///
     /// This returns an error when any of the second values produced by the iterator is second is
     /// too small or too big. The minimum value is `0`. The maximum value is `59`.
+    #[cfg(feature = "alloc")]
     pub fn try_seconds<I: IntoIterator<Item = i8>>(self, seconds: I) -> Result<Cron, Error> {
         seconds.into_iter().try_fold(self, Cron::try_second)
     }

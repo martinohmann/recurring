@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 mod common;
 
 use common::{series_take, series_take_rev};

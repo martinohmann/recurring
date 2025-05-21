@@ -1,19 +1,14 @@
 //! Patterns for recurring events.
 
 mod combined;
-#[cfg(feature = "alloc")]
 mod cron;
-#[cfg(feature = "alloc")]
 mod daily;
 mod interval;
-#[cfg(feature = "alloc")]
 mod ranged;
 mod utils;
 
 pub use combined::Combined;
-#[cfg(feature = "alloc")]
 pub use cron::Cron;
-#[cfg(feature = "alloc")]
 pub use daily::Daily;
 pub use interval::Interval;
 use jiff::{Span, ToSpan};
@@ -31,7 +26,6 @@ use jiff::{Span, ToSpan};
 ///
 /// let pattern = cron().second(10);
 /// ```
-#[cfg(feature = "alloc")]
 #[inline]
 pub fn cron() -> Cron {
     Cron::new()
@@ -123,7 +117,6 @@ pub fn hourly<I: ToSpan>(interval: I) -> Interval {
 ///
 /// let every_two_days = daily(2);
 /// ```
-#[cfg(feature = "alloc")]
 #[inline]
 pub fn daily<I: ToSpan>(interval: I) -> Daily {
     Daily::new(interval)

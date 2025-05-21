@@ -37,7 +37,6 @@ impl Error {
 
     /// Creates a new error indicating that a `given` value is out of the specified `min..=max`
     /// range.
-    #[cfg(feature = "alloc")]
     #[inline(never)]
     #[cold]
     pub(crate) fn range(given: impl Into<i64>, min: impl Into<i64>, max: impl Into<i64>) -> Error {
@@ -104,7 +103,6 @@ enum ErrorKind {
     /// trait.
     Adhoc(AdhocError),
     /// An error that occurs when a number is not within its allowed range.
-    #[cfg_attr(not(feature = "alloc"), allow(dead_code))]
     Range(RangeError),
     /// Creates a new error indicating that the end of a datetime range is not strictly greater
     /// than its start.
@@ -191,7 +189,6 @@ struct RangeError {
 impl RangeError {
     /// Creates a new error indicating that a `given` value is out of the specified `min..=max`
     /// range.
-    #[cfg(feature = "alloc")]
     fn new(given: impl Into<i64>, min: impl Into<i64>, max: impl Into<i64>) -> RangeError {
         RangeError {
             given: given.into(),
