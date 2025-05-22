@@ -1,36 +1,44 @@
-use core::ops::Range;
-use jiff::{Span, SpanTotal, Unit, civil::DateTime};
+use jiff::{Span, civil::DateTime};
 
-// Precision tolerance for float division errors.
-const PRECISION_TOLERANCE: f64 = 0.000_001;
-
-// Returns true if the intervals have a .0 fraction or are very close to it.
-//
-// This handles precision errors caused by float division.
+// Calculates the number of spans between `start` and `end`.
 #[inline]
-pub(super) fn is_interval_boundary(intervals: f64) -> bool {
-    intervals.fract() < PRECISION_TOLERANCE
+pub(super) fn spans_until(span: Span, start: DateTime, end: DateTime) -> Option<f64> {
+    let span_duration = span.to_duration(start).ok()?;
+    let duration = start.duration_until(end);
+    Some(duration.div_duration_f64(span_duration))
 }
 
-// Calculates the number of `interval`s from the range's start until `instant`.
-#[inline]
-pub(super) fn intervals_in_range_until(
-    span: Span,
-    range: &Range<DateTime>,
-    instant: DateTime,
-) -> Option<f64> {
-    let interval_seconds = span_seconds(span)?;
-    let end = instant.max(range.start).min(range.end);
-    seconds_until(range.start, end).map(|seconds| seconds / interval_seconds)
+/// Extension trait for floating point numbers.
+pub(super) trait FloatExt: Sized {
+    /// Returns the smallest integer greater than `self`.
+    ///
+    /// This is similar to `f64::ceil` but will yield the next larger integer if `self` already has
+    /// a zero fractional part.
+    fn ceil_strict(self) -> Self;
+
+    /// Returns the largest integer less than `self`.
+    ///
+    /// This is similar to `f64::floor` but will yield the next smaller integer if `self` already
+    /// has a zero fractional part.
+    fn floor_strict(self) -> Self;
 }
 
-#[inline]
-fn seconds_until(start: DateTime, end: DateTime) -> Option<f64> {
-    start.until(end).ok().and_then(span_seconds)
-}
+impl FloatExt for f64 {
+    #[inline]
+    fn ceil_strict(self) -> f64 {
+        if self.fract() == 0.0 {
+            self + 1.0
+        } else {
+            self.ceil()
+        }
+    }
 
-#[inline]
-fn span_seconds(span: Span) -> Option<f64> {
-    span.total(SpanTotal::from(Unit::Second).days_are_24_hours())
-        .ok()
+    #[inline]
+    fn floor_strict(self) -> f64 {
+        if self.fract() == 0.0 {
+            self - 1.0
+        } else {
+            self.floor()
+        }
+    }
 }
