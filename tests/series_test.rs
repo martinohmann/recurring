@@ -6,7 +6,7 @@ use jiff::{
     civil::{DateTime, date, datetime, time},
 };
 use recurring::pattern::{daily, hourly};
-use recurring::{Event, Series};
+use recurring::{Combine, Event, Series};
 
 #[test]
 fn series_range() {
@@ -71,7 +71,9 @@ fn series_daily_at() {
     assert_eq!(
         series_take(
             start..,
-            daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)),
+            daily(2)
+                .at(time(2, 2, 2, 2))
+                .and(daily(2).at(time(3, 3, 3, 3))),
             5
         ),
         vec![
@@ -125,7 +127,12 @@ fn series_daily_with_end_and_duration() {
 #[test]
 fn series_contains_event() {
     let start = datetime(2025, 1, 1, 1, 1, 1, 0);
-    let series = Series::new(start.., daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)));
+    let series = Series::new(
+        start..,
+        daily(2)
+            .at(time(2, 2, 2, 2))
+            .and(daily(2).at(time(3, 3, 3, 3))),
+    );
     assert!(!series.contains_event(datetime(2025, 1, 1, 1, 1, 1, 0)));
     assert!(series.contains_event(datetime(2025, 1, 1, 2, 2, 2, 2)));
     assert!(series.contains_event(datetime(2025, 1, 1, 3, 3, 3, 3)));
@@ -139,7 +146,9 @@ fn series_relative_events() {
     let end = datetime(2025, 1, 3, 1, 1, 1, 0);
     let series = Series::new(
         start..end,
-        daily(2).at(time(2, 2, 2, 2)).at(time(3, 3, 3, 3)),
+        daily(2)
+            .at(time(2, 2, 2, 2))
+            .and(daily(2).at(time(3, 3, 3, 3))),
     );
     assert_eq!(series.get_event(datetime(2025, 1, 1, 1, 1, 1, 0)), None);
     assert_eq!(

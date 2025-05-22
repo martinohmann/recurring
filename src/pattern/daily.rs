@@ -1,6 +1,5 @@
 use super::Interval;
 use crate::{Error, Pattern, private};
-use alloc::vec::Vec;
 use core::ops::Range;
 use jiff::{
     ToSpan,
@@ -20,7 +19,7 @@ use jiff::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Daily {
     interval: Interval,
-    at: Vec<Time>,
+    at: Option<Time>,
 }
 
 impl Daily {
@@ -42,7 +41,7 @@ impl Daily {
     pub fn new<I: ToSpan>(interval: I) -> Daily {
         Daily {
             interval: Interval::new(interval.days()),
-            at: Vec::new(),
+            at: None,
         }
     }
 
@@ -66,11 +65,11 @@ impl Daily {
     pub fn try_new<I: ToSpan>(interval: I) -> Result<Daily, Error> {
         Ok(Daily {
             interval: Interval::try_new(interval.days())?,
-            at: Vec::new(),
+            at: None,
         })
     }
 
-    /// Adds a time to the daily recurrence pattern.
+    /// Sets the exact time of day for the daily recurrence.
     ///
     /// # Example
     ///
@@ -83,105 +82,48 @@ impl Daily {
     /// let every_day_at_midnight_and_twelve = every_day_at_twelve.at(time(0, 0, 0, 0));
     /// ```
     #[must_use]
-    pub fn at<T: Into<Time>>(self, time: T) -> Daily {
-        self.at_times([time])
-    }
-
-    /// Adds times to the daily recurrence pattern.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use jiff::civil::time;
-    /// use recurring::pattern::daily;
-    ///
-    /// let every_day_at_midnight_and_twelve = daily(1)
-    ///     .at_times([time(0, 0, 0, 0), time(12, 0, 0, 0)]);
-    /// ```
-    #[must_use]
-    pub fn at_times<T: IntoIterator<Item = impl Into<Time>>>(mut self, times: T) -> Daily {
-        self.at.extend(times.into_iter().map(Into::into));
-        self.at.sort();
-        self.at.dedup();
+    pub fn at<T: Into<Time>>(mut self, time: T) -> Daily {
+        self.at = Some(time.into());
         self
     }
 
-    fn get_daily_before(&self, instant: DateTime) -> Option<DateTime> {
-        for time in self.at.iter().rev() {
-            let date = instant.with().time(*time).build().ok()?;
+    fn range_adjusted<F>(
+        &self,
+        f: F,
+        instant: DateTime,
+        range: &Range<DateTime>,
+    ) -> Option<DateTime>
+    where
+        F: FnOnce(&Interval, DateTime, &Range<DateTime>) -> Option<DateTime>,
+    {
+        let Some(time) = self.at else {
+            return f(&self.interval, instant, range);
+        };
 
-            if date < instant {
-                return Some(date);
-            }
-        }
+        let start = if range.start.time() <= time {
+            range.start
+        } else {
+            self.interval.next_after(range.start, range)?
+        };
 
-        None
-    }
+        let start = start.with().time(time).build().ok()?;
+        let range = start..range.end;
 
-    fn get_daily_after(&self, instant: DateTime) -> Option<DateTime> {
-        for time in &self.at {
-            let date = instant.with().time(*time).build().ok()?;
-
-            if date > instant {
-                return Some(date);
-            }
-        }
-
-        None
+        f(&self.interval, instant, &range)
     }
 }
 
 impl Pattern for Daily {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
-        if self.at.is_empty() {
-            return self.interval.next_after(instant, range);
-        }
-
-        let closest = self.closest_to(instant, range)?;
-        if closest > instant {
-            return Some(closest);
-        }
-
-        if let Some(after) = self.get_daily_after(instant) {
-            return Some(after);
-        }
-
-        self.interval
-            .next_after(instant, range)
-            .and_then(|next| self.get_daily_after(next))
+        self.range_adjusted(Interval::next_after, instant, range)
     }
 
     fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
-        if self.at.is_empty() {
-            return self.interval.previous_before(instant, range);
-        }
-
-        let closest = self.closest_to(instant, range)?;
-        if closest < instant {
-            return Some(closest);
-        }
-
-        if let Some(before) = self.get_daily_before(instant) {
-            return Some(before);
-        }
-
-        self.interval
-            .previous_before(instant, range)
-            .and_then(|previous| self.get_daily_before(previous))
+        self.range_adjusted(Interval::previous_before, instant, range)
     }
 
     fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
-        if self.at.is_empty() {
-            return self.interval.closest_to(instant, range);
-        }
-
-        let closest = self.interval.closest_to(instant, range)?;
-
-        self.at
-            .iter()
-            .filter_map(|time| closest.with().time(*time).build().ok())
-            .filter(|date| range.contains(date))
-            .min_by_key(|date| date.duration_since(instant).abs())
+        self.range_adjusted(Interval::closest_to, instant, range)
     }
 }
 
