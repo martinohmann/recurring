@@ -1,4 +1,4 @@
-use super::utils::{intervals_in_range_until, is_interval_boundary};
+use super::utils::{FloatExt, spans_until};
 use crate::{
     Pattern,
     error::{Error, err},
@@ -82,6 +82,7 @@ impl Interval {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)] // We only cast floats with zero fractional part to i64.
 impl Pattern for Interval {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         if instant < range.start {
@@ -89,20 +90,14 @@ impl Pattern for Interval {
             return Some(range.start);
         }
 
-        let mut intervals = intervals_in_range_until(self.span, range, instant)?;
+        let spans = spans_until(self.span, range.start, instant.min(range.end))?;
+        let count = spans.ceil_strict();
 
-        if is_interval_boundary(intervals) {
-            // We want the next event.
-            intervals += 1.0;
-        }
-
-        #[allow(clippy::cast_possible_truncation)] // Already rounded.
-        let n = intervals.ceil() as i64;
         range
             .start
-            .checked_add(n * self.span)
+            .checked_add(count as i64 * self.span)
             .ok()
-            .filter(|&event| event < range.end)
+            .filter(|&next| next < range.end)
     }
 
     fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
@@ -110,35 +105,25 @@ impl Pattern for Interval {
             return None;
         }
 
-        let mut intervals = intervals_in_range_until(self.span, range, instant)?;
+        let spans = spans_until(self.span, range.start, instant.min(range.end))?;
+        let count = spans.floor_strict();
 
-        if is_interval_boundary(intervals) {
-            // We want the previous event.
-            intervals -= 1.0;
-        }
-
-        #[allow(clippy::cast_possible_truncation)] // Already rounded.
-        let n = intervals.floor() as i64;
-        range
-            .start
-            .checked_add(n * self.span)
-            .ok()
-            .filter(|&event| event >= range.start)
+        range.start.checked_add(count as i64 * self.span).ok()
     }
 
     fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
-        let intervals = intervals_in_range_until(self.span, range, instant)?;
-        let mut intervals_rounded = intervals.round();
+        let end = instant.max(range.start).min(range.end);
+        let spans = spans_until(self.span, range.start, end)?;
 
-        if instant >= range.end && intervals_rounded >= intervals {
+        let count = if end == range.end && spans.round() >= spans {
             // The series would hit the end bound exactly or due to rounding up. We want the last
             // event in the series in this case because the range end is excluded from the series.
-            intervals_rounded -= 1.0;
-        }
+            spans.floor_strict()
+        } else {
+            spans.round()
+        };
 
-        #[allow(clippy::cast_possible_truncation)] // Already rounded.
-        let n = intervals_rounded as i64;
-        range.start.checked_add(n * self.span).ok()
+        range.start.checked_add(count as i64 * self.span).ok()
     }
 }
 
