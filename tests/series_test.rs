@@ -5,7 +5,7 @@ use jiff::{
     ToSpan,
     civil::{DateTime, date, datetime, time},
 };
-use recurring::pattern::{daily, hourly};
+use recurring::pattern::{daily, hourly, yearly};
 use recurring::{Combine, Event, Series};
 
 #[test]
@@ -338,5 +338,21 @@ fn series_event_durations() {
             .event_duration(1.year())
             .build()
             .is_err()
+    );
+}
+
+#[test]
+fn series_leap_year() {
+    let start = date(2024, 1, 1).at(0, 0, 0, 0);
+
+    assert_eq!(
+        series_take(start.., yearly(1), 5),
+        vec![
+            Event::at(date(2024, 1, 1).at(0, 0, 0, 0)),
+            Event::at(date(2025, 1, 1).at(0, 0, 0, 0)),
+            Event::at(date(2026, 1, 1).at(0, 0, 0, 0)),
+            Event::at(date(2027, 1, 1).at(0, 0, 0, 0)),
+            Event::at(date(2028, 1, 1).at(0, 0, 0, 0)),
+        ]
     );
 }

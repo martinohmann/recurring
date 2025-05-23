@@ -32,7 +32,7 @@ fn daily_next_after() {
         daily.next_after(range.end - 1.day().nanoseconds(1), &range),
         Some(date(2025, 1, 31).at(0, 0, 0, 0))
     );
-    assert_eq!(daily.next_after(range.end - 1.day(), &range), None,);
+    assert_eq!(daily.next_after(range.end - 1.day(), &range), None);
     assert_eq!(daily.next_after(range.end, &range), None);
     assert_eq!(daily.next_after(DateTime::MAX, &range), None);
 }
@@ -151,13 +151,7 @@ fn daily_closest_to() {
     );
 
     assert_eq!(
-        daily.closest_to(
-            date(2025, 1, 2)
-                .at(0, 0, 0, 0)
-                .checked_sub(1.nanosecond())
-                .unwrap(),
-            &range,
-        ),
+        daily.closest_to(date(2025, 1, 2).at(0, 0, 0, 0) - 1.nanosecond(), &range),
         Some(date(2025, 1, 1).at(0, 0, 0, 0))
     );
 
