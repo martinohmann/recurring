@@ -148,7 +148,6 @@ impl Interval {
     }
 }
 
-#[allow(clippy::cast_possible_truncation)] // We only cast floats with zero fractional part to i64.
 impl Pattern for Interval {
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let start = self.add_offset(range.start)?;
