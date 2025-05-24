@@ -221,3 +221,37 @@ fn interval_closest_to_datetime_max() {
         Some(date(9999, 12, 31).at(22, 0, 0, 0))
     );
 }
+
+#[test]
+fn interval_subsec_units() {
+    let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    let range = start..DateTime::MAX;
+    let interval = Interval::new(100.milliseconds().nanoseconds(100));
+
+    assert_eq!(
+        interval.next_after(start, &range),
+        Some(date(2025, 1, 1).at(0, 0, 0, 100000100))
+    );
+
+    assert_eq!(
+        interval.next_after(start + 101.milliseconds(), &range),
+        Some(date(2025, 1, 1).at(0, 0, 0, 200000200))
+    );
+}
+
+#[test]
+fn interval_offset_zero() {
+    let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    let range = start..DateTime::MAX;
+    let interval = Interval::new(2.hours()).offset(0.seconds());
+
+    assert_eq!(
+        interval.next_after(start, &range),
+        Some(date(2025, 1, 1).at(2, 0, 0, 0))
+    );
+    assert_eq!(
+        interval.previous_before(start + 1.nanosecond(), &range),
+        Some(start)
+    );
+    assert_eq!(interval.closest_to(start, &range), Some(start));
+}

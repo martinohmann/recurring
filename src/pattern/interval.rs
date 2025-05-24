@@ -27,7 +27,7 @@ impl Interval {
     ///
     /// # Panics
     ///
-    /// Panics if `span` is negative or zero, or contains non-zero units smaller than seconds.
+    /// Panics if `span` is negative or zero.
     ///
     /// # Example
     ///
@@ -48,8 +48,7 @@ impl Interval {
     ///
     /// # Errors
     ///
-    /// Returns an `Error` if `span` is negative or zero, or contains non-zero units smaller than
-    /// seconds.
+    /// Returns an `Error` if `span` is negative or zero.
     ///
     /// # Example
     ///
@@ -60,13 +59,10 @@ impl Interval {
     /// assert!(Interval::try_new(1.day()).is_ok());
     /// assert!(Interval::try_new(0.seconds()).is_err());
     /// assert!(Interval::try_new(-1.day()).is_err());
-    /// assert!(Interval::try_new(1.nanosecond()).is_err());
     /// ```
     pub fn try_new(span: Span) -> Result<Interval, Error> {
-        if !Interval::validate(span) {
-            return Err(err!(
-                "interval must be positive, non-zero and must not include sub-second units but got {span}"
-            ));
+        if !span.is_positive() {
+            return Err(err!("interval must be positive but got {span}"));
         }
 
         Ok(Interval { span, offset: None })
@@ -78,7 +74,7 @@ impl Interval {
     ///
     /// # Panics
     ///
-    /// Panics if `offset` is negative or zero, or contains non-zero units smaller than seconds.
+    /// Panics if `offset` is negative.
     ///
     /// # Example
     ///
@@ -102,8 +98,7 @@ impl Interval {
     ///
     /// # Errors
     ///
-    /// Returns an `Error` if `offset` is negative or zero, or contains non-zero units smaller than
-    /// seconds.
+    /// Returns an `Error` if `offset` is negative.
     ///
     /// # Example
     ///
@@ -115,28 +110,17 @@ impl Interval {
     /// // will be 4h 30m after the start.
     /// let interval = Interval::new(2.hours()).try_offset(30.minutes())?;
     ///
-    /// // Negative or too small offsets are not allowed.
-    /// assert!(Interval::new(2.hours()).try_offset(0.seconds()).is_err());
-    /// assert!(Interval::new(2.hours()).try_offset(10.nanoseconds()).is_err());
+    /// // Negative offsets are not allowed.
     /// assert!(Interval::new(2.hours()).try_offset(-1.hour()).is_err());
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn try_offset(mut self, offset: Span) -> Result<Interval, Error> {
-        if !Interval::validate(offset) {
-            return Err(err!(
-                "offset must be positive, non-zero and must not include sub-second units but got {offset}"
-            ));
+        if offset.is_negative() {
+            return Err(err!("offset must be zero or positive but got {offset}"));
         }
 
         self.offset = Some(offset);
         Ok(self)
-    }
-
-    fn validate(span: Span) -> bool {
-        span.is_positive()
-            && span.get_milliseconds() == 0
-            && span.get_microseconds() == 0
-            && span.get_nanoseconds() == 0
     }
 
     fn add_offset(&self, instant: DateTime) -> Option<DateTime> {

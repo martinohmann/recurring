@@ -48,12 +48,12 @@ fn series_errors() {
 fn interval_errors() {
     assert_err!(
         Interval::try_new(0.seconds()),
-        "interval must be positive, non-zero and must not include sub-second units but got PT0S",
+        "interval must be positive but got PT0S",
     );
 
     assert_err!(
-        Interval::try_new(1.second().nanoseconds(10)),
-        "interval must be positive, non-zero and must not include sub-second units but got PT1.00000001S",
+        Interval::try_new(-1.second()),
+        "interval must be positive but got -PT1S",
     );
 }
 
