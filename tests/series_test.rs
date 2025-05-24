@@ -316,30 +316,14 @@ fn series_event_durations() {
 
     assert!(
         series
-            .clone()
             .with()
             .event_duration(30.days().hours(23).minutes(59).seconds(59).nanoseconds(999))
             .build()
             .is_ok()
     );
 
-    assert!(
-        series
-            .clone()
-            .with()
-            .event_duration(1.month())
-            .build()
-            .is_err()
-    );
-
-    assert!(
-        series
-            .clone()
-            .with()
-            .event_duration(1.year())
-            .build()
-            .is_err()
-    );
+    assert!(series.with().event_duration(1.month()).build().is_err());
+    assert!(series.with().event_duration(1.year()).build().is_err());
 }
 
 #[test]

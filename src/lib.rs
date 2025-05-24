@@ -34,7 +34,7 @@ mod private {
 /// by [`Series`] instead because it is more convenient.
 ///
 /// The [`pattern`] module contains implementations of various recurrence patterns.
-pub trait Pattern: private::Sealed {
+pub trait Pattern: private::Sealed + Clone {
     /// Find the next `DateTime` after `instant` within a range.
     ///
     /// This must always returns a datetime that is strictly larger than `instant` or `None` if

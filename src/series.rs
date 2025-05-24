@@ -117,8 +117,8 @@ where
     ///     .build()?;
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
-    pub fn with(self) -> SeriesWith<P> {
-        SeriesWith::new(self)
+    pub fn with(&self) -> SeriesWith<P> {
+        SeriesWith::new(self.clone())
     }
 
     /// Returns the range from series start (inclusive) to series end (exclusive).
