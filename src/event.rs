@@ -73,7 +73,7 @@ impl Event {
 
     /// Creates a new `Event` which spans from a `start` (inclusive) to an `end` (exclusive).
     ///
-    /// The packicking version of this method is [`Event::new`].
+    /// The panicking version of this method is [`Event::new`].
     ///
     /// # Errors
     ///

@@ -44,7 +44,7 @@ impl Interval {
 
     /// Creates a new `Interval` from a `Span`.
     ///
-    /// The packicking version of this method is [`Interval::new`].
+    /// The panicking version of this method is [`Interval::new`].
     ///
     /// # Errors
     ///

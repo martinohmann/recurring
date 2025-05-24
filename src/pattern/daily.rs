@@ -47,7 +47,7 @@ impl Daily {
 
     /// Creates a new `Daily` from an interval of days.
     ///
-    /// The packicking version of this method is [`Daily::new`].
+    /// The panicking version of this method is [`Daily::new`].
     ///
     /// # Errors
     ///

@@ -69,7 +69,7 @@ where
     /// To configure more aspects of the series call `.with()` on the constructed
     /// `Series` value. See the documentation of [`Series::with`] for more details.
     ///
-    /// The packicking version of this method is [`Series::new`].
+    /// The panicking version of this method is [`Series::new`].
     ///
     /// # Errors
     ///
