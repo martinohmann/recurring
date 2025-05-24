@@ -1,3 +1,4 @@
+use crate::pattern::utils::{closest_to, pick_best};
 use crate::{Pattern, private};
 use core::cmp::Ord;
 use core::ops::Range;
@@ -39,40 +40,20 @@ where
     fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let left = self.left.next_after(instant, range);
         let right = self.right.next_after(instant, range);
-        either_or(left, right, Ord::min)
+        pick_best(left, right, Ord::min)
     }
 
     fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let left = self.left.previous_before(instant, range);
         let right = self.right.previous_before(instant, range);
-        either_or(left, right, Ord::max)
+        pick_best(left, right, Ord::max)
     }
 
     fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
         let left = self.left.closest_to(instant, range);
         let right = self.right.closest_to(instant, range);
-        either_or(left, right, |left, right| {
-            if left.duration_until(instant).abs() <= right.duration_until(instant).abs() {
-                left
-            } else {
-                right
-            }
-        })
+        pick_best(left, right, |left, right| closest_to(instant, left, right))
     }
 }
 
 impl<L, R> private::Sealed for Combined<L, R> {}
-
-/// Returns either `left` or `right` if only one of them is `Some(_)`. If both are `Some` returns
-/// the result of `or_fn`, otherwise `None`.
-#[inline]
-fn either_or<F: FnOnce(DateTime, DateTime) -> DateTime>(
-    left: Option<DateTime>,
-    right: Option<DateTime>,
-    or_fn: F,
-) -> Option<DateTime> {
-    match (left, right) {
-        (Some(left), Some(right)) => Some(or_fn(left, right)),
-        (left, right) => left.or(right),
-    }
-}

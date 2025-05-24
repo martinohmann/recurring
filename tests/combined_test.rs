@@ -75,6 +75,10 @@ fn combined_closest_to() {
     );
     assert_eq!(
         pattern.closest_to(date(2025, 1, 2).at(8, 15, 0, 0), &range),
+        Some(date(2025, 1, 2).at(6, 0, 0, 0)),
+    );
+    assert_eq!(
+        pattern.closest_to(date(2025, 1, 2).at(8, 15, 0, 1), &range),
         Some(date(2025, 1, 2).at(10, 30, 0, 0)),
     );
     assert_eq!(

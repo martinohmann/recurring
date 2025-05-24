@@ -1,9 +1,6 @@
-use super::utils::{FloatExt, spans_until};
-use crate::{
-    Pattern,
-    error::{Error, err},
-    private,
-};
+use crate::error::{Error, err};
+use crate::pattern::utils::{advance_by_until, closest_to, pick_best};
+use crate::{Pattern, private};
 use core::ops::Range;
 use jiff::{Span, civil::DateTime};
 
@@ -164,11 +161,12 @@ impl Pattern for Interval {
             return Some(start);
         }
 
-        let spans = spans_until(self.span, start, instant.min(range.end))?;
-        let count = spans.ceil_strict();
+        let date = advance_by_until(start, self.span, instant.min(range.end));
+        if date == range.end {
+            return None;
+        }
 
-        start
-            .checked_add(count as i64 * self.span)
+        date.checked_add(self.span)
             .ok()
             .filter(|&next| next < range.end)
     }
@@ -179,10 +177,14 @@ impl Pattern for Interval {
             return None;
         }
 
-        let spans = spans_until(self.span, start, instant.min(range.end))?;
-        let count = spans.floor_strict();
+        let date = advance_by_until(start, self.span, instant.min(range.end));
+        if date < instant {
+            return Some(date);
+        }
 
-        start.checked_add(count as i64 * self.span).ok()
+        date.checked_sub(self.span)
+            .ok()
+            .filter(|&prev| prev >= start)
     }
 
     fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
@@ -191,18 +193,22 @@ impl Pattern for Interval {
             return None;
         }
 
-        let end = instant.max(start).min(range.end);
-        let spans = spans_until(self.span, start, end)?;
+        let date = advance_by_until(start, self.span, instant.max(start).min(range.end));
 
-        let count = if end == range.end && spans.round() >= spans {
-            // The series would hit the end bound exactly or due to rounding up. We want the last
-            // event in the series in this case because the range end is excluded from the series.
-            spans.floor_strict()
+        let prev = if date == range.end {
+            date.checked_sub(self.span)
+                .ok()
+                .filter(|&prev| prev >= start)
         } else {
-            spans.round()
+            Some(date)
         };
 
-        start.checked_add(count as i64 * self.span).ok()
+        let next = date
+            .checked_add(self.span)
+            .ok()
+            .filter(|&next| next < range.end);
+
+        pick_best(prev, next, |prev, next| closest_to(instant, prev, next))
     }
 }
 
