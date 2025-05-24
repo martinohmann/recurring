@@ -119,56 +119,50 @@ mod tests {
     use super::*;
     use jiff::{ToSpan, civil::date};
     use pretty_assertions::assert_eq;
+    use rstest::rstest;
 
-    #[test]
-    fn test_advance_until() {
-        assert_eq!(
-            advance_by_until(
-                date(2025, 1, 1).at(0, 0, 0, 0),
-                1.minute(),
-                date(2025, 1, 1).at(0, 0, 0, 0)
-            ),
-            date(2025, 1, 1).at(0, 0, 0, 0)
-        );
-        assert_eq!(
-            advance_by_until(
-                date(2025, 1, 1).at(0, 0, 0, 0),
-                1.minute(),
-                date(2025, 1, 10).at(1, 1, 30, 0)
-            ),
-            date(2025, 1, 10).at(1, 1, 0, 0)
-        );
-
-        assert_eq!(
-            advance_by_until(
-                date(2024, 1, 1).at(2, 2, 2, 0),
-                1.year(),
-                date(2027, 1, 10).at(1, 1, 30, 0)
-            ),
-            date(2027, 1, 1).at(2, 2, 2, 0)
-        );
-
-        assert_eq!(
-            advance_by_until(
-                date(2024, 1, 1).at(2, 2, 2, 0),
-                1.month(),
-                date(2024, 10, 10).at(1, 1, 30, 0)
-            ),
-            date(2024, 10, 1).at(2, 2, 2, 0)
-        );
-
-        assert_eq!(
-            advance_by_until(
-                date(2025, 1, 1).at(2, 2, 2, 0),
-                1.day(),
-                date(2027, 1, 3).at(2, 2, 2, 0)
-            ),
-            date(2027, 1, 3).at(2, 2, 2, 0)
-        );
+    #[rstest]
+    #[case(
+        date(2025, 1, 1).at(0, 0, 0, 0),
+        1.minute(),
+        date(2025, 1, 1).at(0, 0, 0, 0),
+        date(2025, 1, 1).at(0, 0, 0, 0)
+    )]
+    #[case(
+        date(2025, 1, 1).at(0, 0, 0, 0),
+        1.minute(),
+        date(2025, 1, 10).at(1, 1, 30, 0),
+        date(2025, 1, 10).at(1, 1, 0, 0)
+    )]
+    #[case(
+        date(2024, 1, 1).at(2, 2, 2, 0),
+        1.year(),
+        date(2027, 1, 10).at(1, 1, 30, 0),
+        date(2027, 1, 1).at(2, 2, 2, 0)
+    )]
+    #[case(
+        date(2024, 1, 1).at(2, 2, 2, 0),
+        1.month(),
+        date(2024, 10, 10).at(1, 1, 30, 0),
+        date(2024, 10, 1).at(2, 2, 2, 0)
+    )]
+    #[case(
+        date(2025, 1, 1).at(2, 2, 2, 0),
+        1.day(),
+        date(2027, 1, 3).at(2, 2, 2, 0),
+        date(2027, 1, 3).at(2, 2, 2, 0)
+    )]
+    fn advance_by_until_cases(
+        #[case] start: DateTime,
+        #[case] span: Span,
+        #[case] end: DateTime,
+        #[case] expected: DateTime,
+    ) {
+        assert_eq!(advance_by_until(start, span, end), expected)
     }
 
     #[test]
-    fn advance_until_worst_case() {
+    fn advance_by_until_worst_case() {
         assert_eq!(
             advance_by_until(DateTime::MIN, 1.nanosecond(), DateTime::MAX),
             date(9999, 12, 31).at(23, 59, 59, 999_999_999)

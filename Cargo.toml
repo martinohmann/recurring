@@ -8,3 +8,4 @@ jiff = "0.2.10"
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"
+rstest = "0.25.0"
