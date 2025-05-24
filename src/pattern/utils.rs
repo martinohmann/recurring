@@ -118,6 +118,7 @@ pub(super) fn pick_best<F: FnOnce(DateTime, DateTime) -> DateTime>(
 mod tests {
     use super::*;
     use jiff::{ToSpan, civil::date};
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_advance_until() {

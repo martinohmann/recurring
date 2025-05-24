@@ -218,6 +218,7 @@ mod tests {
     use super::*;
     use alloc::string::ToString;
     use jiff::civil::date;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn event_end_before_start() {

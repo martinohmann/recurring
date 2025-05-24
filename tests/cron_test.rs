@@ -2,6 +2,7 @@ mod common;
 
 use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, Weekday, date};
+use pretty_assertions::assert_eq;
 use recurring::pattern::{Cron, cron};
 use recurring::{Event, Pattern};
 

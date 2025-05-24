@@ -5,6 +5,7 @@ use jiff::{
     ToSpan,
     civil::{DateTime, date, datetime, time},
 };
+use pretty_assertions::assert_eq;
 use recurring::pattern::{daily, hourly, yearly};
 use recurring::{Combine, Event, Series};
 
