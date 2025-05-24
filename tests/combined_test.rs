@@ -4,7 +4,7 @@ use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, date};
 use pretty_assertions::assert_eq;
 use recurring::pattern::{cron, hourly};
-use recurring::{Combine, Event, Pattern};
+use recurring::{Combine, Event, Pattern, SeriesRange};
 
 #[test]
 fn combined() {
@@ -54,7 +54,7 @@ fn combined() {
 fn combined_closest_to() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = date(2025, 12, 31).at(12, 0, 0, 0);
-    let range = start..end;
+    let range = SeriesRange::from(start..end);
     let pattern = cron()
         .hour(10)
         .minute(30)
@@ -63,31 +63,31 @@ fn combined_closest_to() {
         .and(hourly(6));
 
     assert_eq!(
-        pattern.closest_to(date(2024, 12, 31).at(0, 0, 0, 0), &range),
+        pattern.closest_to(date(2024, 12, 31).at(0, 0, 0, 0), range),
         Some(date(2025, 1, 1).at(12, 0, 0, 0)),
     );
     assert_eq!(
-        pattern.closest_to(date(2025, 1, 1).at(12, 0, 0, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(12, 0, 0, 0), range),
         Some(date(2025, 1, 1).at(12, 0, 0, 0)),
     );
     assert_eq!(
-        pattern.closest_to(date(2025, 1, 2).at(8, 14, 59, 0), &range),
+        pattern.closest_to(date(2025, 1, 2).at(8, 14, 59, 0), range),
         Some(date(2025, 1, 2).at(6, 0, 0, 0)),
     );
     assert_eq!(
-        pattern.closest_to(date(2025, 1, 2).at(8, 15, 0, 0), &range),
+        pattern.closest_to(date(2025, 1, 2).at(8, 15, 0, 0), range),
         Some(date(2025, 1, 2).at(6, 0, 0, 0)),
     );
     assert_eq!(
-        pattern.closest_to(date(2025, 1, 2).at(8, 15, 0, 1), &range),
+        pattern.closest_to(date(2025, 1, 2).at(8, 15, 0, 1), range),
         Some(date(2025, 1, 2).at(10, 30, 0, 0)),
     );
     assert_eq!(
-        pattern.closest_to(date(2025, 1, 2).at(8, 15, 1, 0), &range),
+        pattern.closest_to(date(2025, 1, 2).at(8, 15, 1, 0), range),
         Some(date(2025, 1, 2).at(10, 30, 0, 0)),
     );
     assert_eq!(
-        pattern.closest_to(DateTime::MAX, &range),
+        pattern.closest_to(DateTime::MAX, range),
         Some(date(2025, 12, 31).at(10, 30, 0, 0)),
     );
 }

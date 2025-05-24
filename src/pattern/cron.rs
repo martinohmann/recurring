@@ -1,6 +1,6 @@
 use super::ranged::{Days, Hours, Minutes, Months, Seconds, Weekdays, Years};
-use crate::{Error, Pattern, private};
-use core::ops::Range;
+use crate::{Error, Pattern, SeriesRange, private};
+use core::ops::RangeBounds;
 use jiff::ToSpan;
 use jiff::civil::{DateTime, Weekday};
 
@@ -686,11 +686,7 @@ impl Cron {
 }
 
 impl Cron {
-    fn next_after_or_current(
-        &self,
-        instant: DateTime,
-        range: &Range<DateTime>,
-    ) -> Option<DateTime> {
+    fn next_after_or_current(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
         let mut clamp = DateTimeClamp::new(instant);
 
         for year in self.years.range(clamp.year..=Years::MAX) {
@@ -769,7 +765,7 @@ impl Cron {
     fn previous_before_or_current(
         &self,
         instant: DateTime,
-        range: &Range<DateTime>,
+        range: SeriesRange,
     ) -> Option<DateTime> {
         let mut clamp = DateTimeClamp::new(instant);
 
@@ -843,12 +839,12 @@ impl Cron {
 }
 
 impl Pattern for Cron {
-    fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn next_after(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
         let instant = instant.checked_add(1.second()).ok()?;
         self.next_after_or_current(instant, range)
     }
 
-    fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn previous_before(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
         let instant = if instant.subsec_nanosecond() > 0 {
             instant
         } else {
@@ -857,7 +853,7 @@ impl Pattern for Cron {
         self.previous_before_or_current(instant, range)
     }
 
-    fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn closest_to(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
         let instant = instant.max(range.start).min(range.end);
 
         let Some(next) = self.next_after_or_current(instant, range) else {
