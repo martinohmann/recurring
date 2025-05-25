@@ -1,7 +1,6 @@
 use crate::error::{Error, err};
 use crate::pattern::utils::{advance_by_until, closest_to, pick_best};
-use crate::{Pattern, private};
-use core::ops::Range;
+use crate::{Pattern, SeriesRange, private};
 use jiff::{Span, civil::DateTime};
 
 /// A fixed interval recurrence pattern.
@@ -133,18 +132,37 @@ impl Interval {
 }
 
 impl Pattern for Interval {
-    fn next_after(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn next_after(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
         let start = self.add_offset(range.start)?;
         if start >= range.end {
             return None;
         }
 
+        let fixpoint = self.add_offset(range.fixpoint())?;
+
         if instant < start {
-            // We want the start if instant happens before that.
-            return Some(start);
+            // We want the first event in the series, which may be the series start or a later
+            // point within the series.
+
+            if start == fixpoint {
+                // Fast path: we can just return `start` here.
+                return Some(start);
+            }
+
+            // Slow path: first event is relative to `fixpoint`, we need to compute it.
+            let date = advance_by_until(fixpoint, self.span, start);
+            if date >= start {
+                return Some(date);
+            }
+
+            return date
+                .checked_add(self.span)
+                .ok()
+                .filter(|&next| next < range.end);
         }
 
-        let date = advance_by_until(start, self.span, instant.min(range.end));
+        // Normal path: advance to the next event.
+        let date = advance_by_until(fixpoint, self.span, instant.min(range.end));
         if date == range.end {
             return None;
         }
@@ -154,13 +172,14 @@ impl Pattern for Interval {
             .filter(|&next| next < range.end)
     }
 
-    fn previous_before(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn previous_before(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
         let start = self.add_offset(range.start)?;
         if instant <= start || start >= range.end {
             return None;
         }
 
-        let date = advance_by_until(start, self.span, instant.min(range.end));
+        let fixpoint = self.add_offset(range.fixpoint())?;
+        let date = advance_by_until(fixpoint, self.span, instant.min(range.end));
         if date < instant {
             return Some(date);
         }
@@ -170,21 +189,21 @@ impl Pattern for Interval {
             .filter(|&prev| prev >= start)
     }
 
-    fn closest_to(&self, instant: DateTime, range: &Range<DateTime>) -> Option<DateTime> {
+    fn closest_to(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
         let start = self.add_offset(range.start)?;
         if start >= range.end {
             return None;
         }
 
-        let date = advance_by_until(start, self.span, instant.max(start).min(range.end));
+        let fixpoint = self.add_offset(range.fixpoint())?;
+        let date = advance_by_until(fixpoint, self.span, instant.max(start).min(range.end));
 
         let prev = if date == range.end {
-            date.checked_sub(self.span)
-                .ok()
-                .filter(|&prev| prev >= start)
+            date.checked_sub(self.span).ok()
         } else {
             Some(date)
-        };
+        }
+        .filter(|&prev| prev >= start);
 
         let next = date
             .checked_add(self.span)

@@ -1,8 +1,5 @@
-use crate::{
-    Event, IntoBounds, Pattern,
-    error::{Error, err},
-    try_simplify_range,
-};
+use crate::error::{Error, err};
+use crate::{Event, IntoBounds, Pattern, try_simplify_range};
 use core::ops::{Bound, Range, RangeBounds};
 use jiff::{Span, civil::DateTime};
 
@@ -29,7 +26,7 @@ use jiff::{Span, civil::DateTime};
 #[derive(Debug, Clone)]
 pub struct Series<P> {
     pattern: P,
-    range: Range<DateTime>,
+    range: SeriesRange,
     event_duration: Span,
 }
 
@@ -94,7 +91,7 @@ where
 
         Ok(Series {
             pattern,
-            range,
+            range: range.into(),
             event_duration: Span::new(),
         })
     }
@@ -121,14 +118,6 @@ where
         SeriesWith::new(self.clone())
     }
 
-    /// Returns the range from series start (inclusive) to series end (exclusive).
-    ///
-    /// If the series has a non-zero event duration configured, the returned range will end at
-    /// `initial_end - event_duration`.
-    pub fn range(&self) -> &Range<DateTime> {
-        &self.range
-    }
-
     /// Returns the `DateTime` at which the series starts (inclusive).
     ///
     /// This is not necessarily the time of the first event in the series.
@@ -145,6 +134,17 @@ where
     /// event_duration`.
     pub fn end(&self) -> DateTime {
         self.range.end
+    }
+
+    /// Returns the fixpoint for relative recurrence patterns.
+    ///
+    /// This is used as a starting point for `Pattern` implementations that are relative to some
+    /// point in time.
+    ///
+    /// Unless [`SeriesWith::fixpoint`] was called with a specific value, this returns the same
+    /// value as [`Series::start`].
+    pub fn fixpoint(&self) -> DateTime {
+        self.range.fixpoint()
     }
 
     /// Returns the duration of individual events in the series.
@@ -255,7 +255,7 @@ where
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        let closest = self.pattern.closest_to(instant, &self.range)?;
+        let closest = self.pattern.closest_to(instant, self.range)?;
         if closest == instant {
             return self.get_event_unchecked(instant);
         }
@@ -352,7 +352,7 @@ where
     /// ```
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
         self.pattern
-            .next_after(instant, &self.range)
+            .next_after(instant, self.range)
             .and_then(|next| self.get_event_unchecked(next))
     }
 
@@ -390,7 +390,7 @@ where
     /// ```
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
         self.pattern
-            .previous_before(instant, &self.range)
+            .previous_before(instant, self.range)
             .and_then(|previous| self.get_event_unchecked(previous))
     }
 
@@ -426,7 +426,7 @@ where
     /// ```
     pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
         self.pattern
-            .closest_to(instant, &self.range)
+            .closest_to(instant, self.range)
             .and_then(|closest| self.get_event_unchecked(closest))
     }
 
@@ -470,10 +470,13 @@ where
 ///   hours, days or any other duration the `Span` type supports. If `event_duration` is not set,
 ///   individual events will not have an end datetime and have an effective duration of zero.
 /// - `pattern`: The recurrence pattern for the series.
+/// - `fixpoint`: A custom fixpoint different from the series `start` for relative recurrence
+///   patterns.
 #[derive(Debug, Clone)]
 pub struct SeriesWith<P> {
     pattern: P,
     bounds: (Bound<DateTime>, Bound<DateTime>),
+    fixpoint: Option<DateTime>,
     event_duration: Span,
 }
 
@@ -481,11 +484,12 @@ impl<P> SeriesWith<P>
 where
     P: Pattern,
 {
-    /// Creates an new `SeriesWith` from a `Series`.
+    /// Creates a new `SeriesWith` from a `Series`.
     fn new(series: Series<P>) -> SeriesWith<P> {
         SeriesWith {
             pattern: series.pattern,
             bounds: series.range.into_bounds(),
+            fixpoint: series.range.fixpoint,
             event_duration: series.event_duration,
         }
     }
@@ -573,6 +577,41 @@ where
         self
     }
 
+    /// Sets a fixpoint for relative recurrence patterns.
+    ///
+    /// This is used as a starting point for `Pattern` implementations that are relative to some
+    /// point in time to calculate the closest recurrence adjacent to a certain instant.
+    ///
+    /// The default behaviour is to use the series start as a fixpoint.
+    ///
+    /// The fixpoint must be less or equal to the series start.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Event, Series, pattern::daily};
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let fixpoint = date(2024, 12, 31).at(12, 34, 56, 0);
+    /// let series = Series::new(start.., daily(1))
+    ///     .with()
+    ///     .fixpoint(fixpoint)
+    ///     .build()?;
+    ///
+    /// assert_eq!(series.first_event(), Some(Event::at(date(2025, 1, 1).at(12, 34, 56, 0))));
+    ///
+    /// // Fixpoint must be less or equal to `start`.
+    /// assert!(series.with().fixpoint(start).build().is_ok());
+    /// assert!(series.with().fixpoint(start + 1.nanosecond()).build().is_err());
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub fn fixpoint(mut self, fixpoint: DateTime) -> SeriesWith<P> {
+        self.fixpoint = Some(fixpoint);
+        self
+    }
+
     /// Sets the duration of individual events in the series.
     ///
     /// If `.event_duration()` is not called with a custom value, events will not have an end
@@ -620,6 +659,7 @@ where
         SeriesWith {
             pattern,
             bounds: self.bounds,
+            fixpoint: self.fixpoint,
             event_duration: self.event_duration,
         }
     }
@@ -630,7 +670,7 @@ where
     ///
     /// Returns an `Error` if the configured `end` is less than or equal to `start`, if the
     /// configured `event_duration` is negative, or if the `event_duration` greater or equal to the
-    /// range (`start..end`) of the series.
+    /// range (`start..end`) of the series, or if the `fixpoint` is greater than the series `start`.
     ///
     /// # Example
     ///
@@ -662,6 +702,12 @@ where
         if range.start >= range.end {
             return Err(Error::datetime_range("series", range));
         }
+
+        let range = if let Some(fixpoint) = self.fixpoint {
+            SeriesRange::from(range).with_fixpoint(fixpoint)?
+        } else {
+            range.into()
+        };
 
         Ok(Series {
             pattern: self.pattern,
@@ -723,5 +769,98 @@ where
         let event = self.series.get_event_before(cursor)?;
         self.cursor_back = Some(event.start());
         Some(event)
+    }
+}
+
+/// Representation of the time range of a [`Series`].
+///
+/// This type is similar to [`Range<DateTime>`] but carries additional functionality used by the
+/// [`Pattern`] trait. There's usually no need for users of this crate to instantiate values of
+/// this type unless you want to interact with methods of the `Pattern` trait directly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SeriesRange {
+    /// The lower bound of the series (inclusive).
+    pub(crate) start: DateTime,
+    /// The upper bound of the series (exclusive).
+    pub(crate) end: DateTime,
+    /// An optional (inclusive) fixpoint used as a starting point for `Pattern` implementations
+    /// that are relative to some point in time.
+    ///
+    /// If this is `None`, these implementations should use `start` as their fixpoint.
+    fixpoint: Option<DateTime>,
+}
+
+impl SeriesRange {
+    /// Creates a new `SeriesRange` from a start (inclusive) and an end (exclusive).
+    #[inline]
+    pub(crate) const fn new(start: DateTime, end: DateTime) -> SeriesRange {
+        SeriesRange {
+            start,
+            end,
+            fixpoint: None,
+        }
+    }
+
+    /// Sets the (inclusive) fixpoint for relative recurrence patterns.
+    ///
+    /// This is used as a starting point for `Pattern` implementations that are relative to some
+    /// point in time.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `fixpoint` is greater than the range start.
+    #[inline]
+    pub(crate) fn with_fixpoint(mut self, fixpoint: DateTime) -> Result<SeriesRange, Error> {
+        if fixpoint > self.start {
+            return Err(err!(
+                "fixpoint ({fixpoint}) must be less than or equal to range start ({})",
+                self.start
+            ));
+        }
+        self.fixpoint = Some(fixpoint);
+        Ok(self)
+    }
+
+    /// Returns the (inclusive) fixpoint for relative recurrence patterns.
+    ///
+    /// Unless [`SeriesRange::with_fixpoint`] was called with a specific value, this returns the
+    /// same value as [`SeriesRange::start`].
+    #[inline]
+    pub(crate) fn fixpoint(&self) -> DateTime {
+        self.fixpoint.unwrap_or(self.start)
+    }
+
+    /// The lower bound of the series (inclusive).
+    #[inline]
+    pub const fn start(&self) -> DateTime {
+        self.start
+    }
+
+    /// The upper bound of the series (exclusive).
+    #[inline]
+    pub const fn end(&self) -> DateTime {
+        self.end
+    }
+}
+
+impl RangeBounds<DateTime> for SeriesRange {
+    fn start_bound(&self) -> Bound<&DateTime> {
+        Bound::Included(&self.start)
+    }
+
+    fn end_bound(&self) -> Bound<&DateTime> {
+        Bound::Excluded(&self.end)
+    }
+}
+
+impl From<SeriesRange> for Range<DateTime> {
+    fn from(range: SeriesRange) -> Self {
+        range.start..range.end
+    }
+}
+
+impl From<Range<DateTime>> for SeriesRange {
+    fn from(range: Range<DateTime>) -> Self {
+        SeriesRange::new(range.start, range.end)
     }
 }

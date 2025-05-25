@@ -4,7 +4,7 @@ use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, Weekday, date};
 use pretty_assertions::assert_eq;
 use recurring::pattern::{Cron, cron};
-use recurring::{Event, Pattern};
+use recurring::{Event, Pattern, SeriesRange};
 
 #[test]
 fn cron_default() {
@@ -96,79 +96,79 @@ fn cron_weekdays() {
 
 #[test]
 fn cron_next_after() {
-    let range = DateTime::MIN..DateTime::MAX;
+    let range = SeriesRange::from(DateTime::MIN..DateTime::MAX);
     let pattern = Cron::new().minute(3).second(5).second(10);
 
     assert_eq!(
-        pattern.next_after(date(2025, 1, 1).at(0, 0, 0, 0), &range),
+        pattern.next_after(date(2025, 1, 1).at(0, 0, 0, 0), range),
         Some(date(2025, 1, 1).at(0, 3, 5, 0))
     );
 
     assert_eq!(
-        pattern.next_after(date(2025, 1, 1).at(0, 3, 5, 0), &range),
+        pattern.next_after(date(2025, 1, 1).at(0, 3, 5, 0), range),
         Some(date(2025, 1, 1).at(0, 3, 10, 0))
     );
 
     assert_eq!(
-        pattern.next_after(date(2025, 1, 1).at(0, 3, 10, 0), &range),
+        pattern.next_after(date(2025, 1, 1).at(0, 3, 10, 0), range),
         Some(date(2025, 1, 1).at(1, 3, 5, 0))
     );
 }
 
 #[test]
 fn cron_previous_before() {
-    let range = DateTime::MIN..DateTime::MAX;
+    let range = SeriesRange::from(DateTime::MIN..DateTime::MAX);
     let pattern = Cron::new().minute(3).seconds([5, 10]);
 
     assert_eq!(
-        pattern.previous_before(date(2025, 1, 1).at(0, 3, 5, 0), &range),
+        pattern.previous_before(date(2025, 1, 1).at(0, 3, 5, 0), range),
         Some(date(2024, 12, 31).at(23, 3, 10, 0))
     );
 
     assert_eq!(
-        pattern.previous_before(date(2024, 12, 31).at(23, 3, 10, 0), &range),
+        pattern.previous_before(date(2024, 12, 31).at(23, 3, 10, 0), range),
         Some(date(2024, 12, 31).at(23, 3, 5, 0))
     );
 
     assert_eq!(
-        pattern.previous_before(date(2024, 12, 31).at(23, 3, 5, 0), &range),
+        pattern.previous_before(date(2024, 12, 31).at(23, 3, 5, 0), range),
         Some(date(2024, 12, 31).at(22, 3, 10, 0))
     );
 }
 
 #[test]
 fn cron_closest_to() {
-    let range = DateTime::MIN..DateTime::MAX;
+    let range = SeriesRange::from(DateTime::MIN..DateTime::MAX);
     let pattern = Cron::new().hour(1).minute(30).second(0);
 
     assert_eq!(
-        pattern.closest_to(date(2025, 1, 1).at(1, 29, 59, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(1, 29, 59, 0), range),
         Some(date(2025, 1, 1).at(1, 30, 0, 0))
     );
 
     assert_eq!(
-        pattern.closest_to(date(2025, 1, 1).at(1, 30, 1, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(1, 30, 1, 0), range),
         Some(date(2025, 1, 1).at(1, 30, 0, 0))
     );
 
     assert_eq!(
-        pattern.closest_to(date(2025, 1, 1).at(14, 0, 0, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(14, 0, 0, 0), range),
         Some(date(2025, 1, 2).at(1, 30, 0, 0))
     );
 
     assert_eq!(
-        pattern.closest_to(date(2025, 1, 1).at(1, 30, 0, 0), &range),
+        pattern.closest_to(date(2025, 1, 1).at(1, 30, 0, 0), range),
         Some(date(2025, 1, 1).at(1, 30, 0, 0))
     );
 }
 
 #[test]
 fn cron_closest_to_datetime_max() {
-    let range = DateTime::MIN..DateTime::MAX;
+    let range = SeriesRange::from(DateTime::MIN..DateTime::MAX);
     let pattern = Cron::new().hour(1).minute(30).second(0);
 
     assert_eq!(
-        pattern.closest_to(DateTime::MAX, &range),
+        pattern.closest_to(DateTime::MAX, range),
         Some(date(9999, 12, 31).at(1, 30, 0, 0))
     );
 }

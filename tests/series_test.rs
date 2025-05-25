@@ -6,7 +6,7 @@ use jiff::{
     civil::{DateTime, date, datetime, time},
 };
 use pretty_assertions::assert_eq;
-use recurring::pattern::{daily, hourly, yearly};
+use recurring::pattern::{daily, hourly, monthly, yearly};
 use recurring::{Combine, Event, Series};
 
 #[test]
@@ -338,6 +338,43 @@ fn series_leap_year() {
             Event::at(date(2026, 1, 1).at(0, 0, 0, 0)),
             Event::at(date(2027, 1, 1).at(0, 0, 0, 0)),
             Event::at(date(2028, 1, 1).at(0, 0, 0, 0)),
+        ]
+    );
+}
+
+#[test]
+fn series_with_fixpoint() {
+    let start = date(2024, 1, 1).at(0, 0, 0, 0);
+    let fixpoint = date(2023, 12, 30).at(12, 34, 56, 0);
+    let series = Series::new(start.., monthly(1))
+        .with()
+        .fixpoint(fixpoint)
+        .build()
+        .unwrap();
+
+    let events: Vec<_> = series.iter().take(5).collect();
+
+    assert_eq!(
+        events,
+        vec![
+            Event::at(date(2024, 1, 30).at(12, 34, 56, 0)),
+            Event::at(date(2024, 2, 29).at(12, 34, 56, 0)),
+            Event::at(date(2024, 3, 29).at(12, 34, 56, 0)),
+            Event::at(date(2024, 4, 29).at(12, 34, 56, 0)),
+            Event::at(date(2024, 5, 29).at(12, 34, 56, 0)),
+        ]
+    );
+
+    let events: Vec<_> = series.iter().rev().take(5).collect();
+
+    assert_eq!(
+        events,
+        vec![
+            Event::at(date(9999, 12, 28).at(12, 34, 56, 0)),
+            Event::at(date(9999, 11, 28).at(12, 34, 56, 0)),
+            Event::at(date(9999, 10, 28).at(12, 34, 56, 0)),
+            Event::at(date(9999, 9, 28).at(12, 34, 56, 0)),
+            Event::at(date(9999, 8, 28).at(12, 34, 56, 0)),
         ]
     );
 }
