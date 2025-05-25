@@ -16,7 +16,7 @@ pub use event::Event;
 use jiff::civil::{Date, DateTime, time};
 use jiff::{ToSpan, Zoned};
 use pattern::Combined;
-pub use series::{Iter, Series, SeriesRange, SeriesWith};
+pub use series::{Iter, Series, SeriesRange, SeriesSplit, SeriesWith, SplitMode};
 
 mod private {
     pub trait Sealed {}
