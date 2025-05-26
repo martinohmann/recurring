@@ -263,7 +263,7 @@ where
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        let closest = self.pattern.closest_to(instant, self.range)?;
+        let closest = self.closest_to(instant)?;
         if closest == instant {
             return self.get_event_unchecked(instant);
         }
@@ -359,8 +359,7 @@ where
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
-        self.pattern
-            .next_after(instant, self.range)
+        self.next_after(instant)
             .and_then(|next| self.get_event_unchecked(next))
     }
 
@@ -397,8 +396,7 @@ where
     /// );
     /// ```
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
-        self.pattern
-            .previous_before(instant, self.range)
+        self.previous_before(instant)
             .and_then(|previous| self.get_event_unchecked(previous))
     }
 
@@ -433,9 +431,32 @@ where
     /// );
     /// ```
     pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
-        self.pattern
-            .closest_to(instant, self.range)
+        self.closest_to(instant)
             .and_then(|closest| self.get_event_unchecked(closest))
+    }
+}
+
+// Internal APIs.
+impl<P> Series<P>
+where
+    P: Pattern,
+{
+    /// Find the next `DateTime` after `instant` within the series.
+    #[inline]
+    fn next_after(&self, instant: DateTime) -> Option<DateTime> {
+        self.pattern.next_after(instant, self.range)
+    }
+
+    /// Find the previous `DateTime` before `instant` within the series.
+    #[inline]
+    fn previous_before(&self, instant: DateTime) -> Option<DateTime> {
+        self.pattern.previous_before(instant, self.range)
+    }
+
+    /// Find a `DateTime` closest to `instant` within the series.
+    #[inline]
+    fn closest_to(&self, instant: DateTime) -> Option<DateTime> {
+        self.pattern.closest_to(instant, self.range)
     }
 
     /// Get an event without any bound checks. The datetime at `start` is assumed to be aligned to
