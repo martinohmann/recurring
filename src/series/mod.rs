@@ -1,11 +1,13 @@
 //! A series of recurring events.
 mod core;
+mod find;
 mod iter;
 mod range;
 mod split;
 mod with;
 
 use core::SeriesCore;
+pub use find::{FindMode, SeriesFind};
 pub use iter::Iter;
 pub use range::Range;
 pub use split::{SeriesSplit, SplitMode};
@@ -503,6 +505,84 @@ where
     /// ```
     pub fn get_closest_to(&self, instant: DateTime) -> Option<Event> {
         self.core.get_closest_to(instant, self.range)
+    }
+
+    /// Finds an event within the series.
+    ///
+    /// Note that this routine is generic and accepts anything that implements `Into<SeriesFind>`.
+    /// Some notable implementations are:
+    ///
+    /// * `From<DateTime> for SeriesFind` will construct a series find configuration which finds the
+    ///   next series event after a given datetime. The `Date`, `Zoned` and `&Zoned` types can be used
+    ///   instead of `DateTime` as well.
+    /// * `From<(FindMode, T)> for SeriesFind where T: Into<SeriesFind>` will construct a series
+    ///   find configuration using a certain [`FindMode`]. This enables finding the next, previous,
+    ///   closest, containing or exact event for a given datetime.
+    ///
+    /// # Example: find the event closest to an instant
+    ///
+    /// ```
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Event, Series, pattern::hourly};
+    /// use recurring::series::FindMode;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let end = date(2025, 2, 1).at(0, 0, 0, 0);
+    /// let series = Series::new(start..end, hourly(1));
+    ///
+    /// assert_eq!(
+    ///     series.find((FindMode::ClosestTo, date(2025, 1, 1).at(1, 30, 0, 0))),
+    ///     Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))),
+    /// );
+    /// assert_eq!(
+    ///     series.find((FindMode::ClosestTo, date(2025, 1, 1).at(1, 30, 0, 0) - 1.nanosecond())),
+    ///     Some(Event::at(date(2025, 1, 1).at(1, 0, 0, 0))),
+    /// );
+    /// ```
+    ///
+    /// # Example: find the event containing an instant
+    ///
+    /// For series' with a non-zero event duration, `FindMode::Containing` find the event
+    /// containing the instant.
+    ///
+    /// ```
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Event, Series, pattern::hourly};
+    /// use recurring::series::FindMode;
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let end = date(2025, 2, 1).at(0, 0, 0, 0);
+    /// let series = Series::new(start..end, hourly(1))
+    ///     .with()
+    ///     .event_duration(30.minutes())
+    ///     .build()?;
+    ///
+    /// assert_eq!(
+    ///     series.find((FindMode::Containing, start - 1.minute())),
+    ///     None,
+    /// );
+    /// assert_eq!(
+    ///     series.find((FindMode::Containing, start)),
+    ///     Some(Event::new(start, start + 30.minutes())),
+    /// );
+    /// assert_eq!(
+    ///     series.find((FindMode::Containing, start + 31.minutes())),
+    ///     None,
+    /// );
+    /// assert_eq!(
+    ///     series.find((FindMode::Containing, start + 1.hour().minutes(20))),
+    ///     Some(Event::new(start + 1.hour(), start + 1.hour().minutes(30))),
+    /// );
+    /// assert_eq!(
+    ///     series.find((FindMode::Containing, end)),
+    ///     None,
+    /// );
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    #[inline]
+    pub fn find<S: Into<SeriesFind>>(&self, options: S) -> Option<Event> {
+        let options: SeriesFind = options.into();
+        options.find(self)
     }
 
     /// Splits off a part of the series.

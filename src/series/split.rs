@@ -62,7 +62,7 @@ impl SeriesSplit {
     ///
     /// ```
     /// use jiff::{ToSpan, civil::{date, DateTime}};
-    /// use recurring::{Event, Series, pattern::hourly};
+    /// use recurring::{Series, pattern::hourly};
     /// use recurring::series::{SeriesSplit, SplitMode};
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
