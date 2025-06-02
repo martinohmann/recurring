@@ -95,8 +95,8 @@ enum ErrorKind {
     Adhoc(AdhocError),
     /// An error that occurs when a number is not within its allowed range.
     Range(RangeError),
-    /// Creates a new error indicating that the end of a datetime range is not strictly greater
-    /// than its start.
+    /// An error indicating that the end of a datetime range is not strictly greater than its
+    /// start.
     DateTimeRange(DateTimeRangeError),
     /// An error produced by fallible operations on `jiff` types.
     Jiff(JiffError),

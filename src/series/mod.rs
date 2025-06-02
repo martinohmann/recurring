@@ -1,9 +1,11 @@
 mod iter;
 mod range;
+mod split;
 mod with;
 
 pub use iter::Iter;
 pub use range::SeriesRange;
+pub use split::{SeriesSplit, SplitMode};
 pub use with::SeriesWith;
 
 use crate::error::Error;
@@ -436,6 +438,69 @@ where
         self.pattern
             .closest_to(instant, self.range)
             .and_then(|closest| self.get_event_unchecked(closest))
+    }
+
+    /// Splits off a part of the series.
+    ///
+    /// If splitting succeeds, the original series' end is adjusted towards the cutoff point.
+    ///
+    /// Note that this routine is generic and accepts anything that implements `Into<SeriesSplit>`.
+    /// Some notable implementations are:
+    ///
+    /// * `From<DateTime> for SeriesSplit` will construct a series split configuration which splits
+    ///   the series at a given datetime. The `Date`, `Zoned` and `&Zoned` types can be used
+    ///   instead of `DateTime` as well.
+    /// * `From<(SplitMode, T)> for SeriesSplit where T: Into<SeriesSplit>` will construct a series
+    ///   split configuration using a certain [`SplitMode`]. This enables splitting at the next,
+    ///   previous or closest event.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the [`SeriesSplit`] fails to find a cutoff point according to its
+    /// [`SplitMode`] or if splitting the series would result in either of the series to have
+    /// `start >= end`. It is guaranteed that the original series was not altered if this method
+    /// returns an error.
+    ///
+    /// # Example: split at an exact datetime
+    ///
+    /// ```
+    /// use jiff::{ToSpan, civil::{date, DateTime}};
+    /// use recurring::{Event, Series, pattern::hourly};
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let mut s1 = Series::new(start.., hourly(1));
+    ///
+    /// let cutoff_point = date(2025, 4, 1).at(12, 34, 56, 0);
+    ///
+    /// let s2 = s1.split_off(cutoff_point)?;
+    ///
+    /// assert_eq!(s2.first_event(), Some(Event::at(date(2025, 4, 1).at(13, 0, 0, 0))));
+    /// assert_eq!(s1.end(), cutoff_point);
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    ///
+    /// # Example: split at the next event after a datetime
+    ///
+    /// ```
+    /// use jiff::{ToSpan, civil::{date, DateTime}};
+    /// use recurring::{Event, Series, SplitMode, pattern::hourly};
+    ///
+    /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
+    /// let mut s1 = Series::new(start.., hourly(1));
+    ///
+    /// let instant = date(2025, 4, 1).at(12, 34, 56, 0);
+    ///
+    /// // Use `SplitMode::NextAfter` to split at the next event after `instant`.
+    /// let s2 = s1.split_off((SplitMode::NextAfter, instant))?;
+    ///
+    /// assert_eq!(s2.first_event(), Some(Event::at(date(2025, 4, 1).at(13, 0, 0, 0))));
+    /// assert_eq!(s1.end(), date(2025, 4, 1).at(13, 0, 0, 0));
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    #[inline]
+    pub fn split_off<S: Into<SeriesSplit>>(&mut self, options: S) -> Result<Series<P>, Error> {
+        let options: SeriesSplit = options.into();
+        options.split_off(self)
     }
 }
 
