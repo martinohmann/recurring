@@ -43,10 +43,7 @@ impl Event {
     /// ```
     #[inline]
     pub fn at(instant: DateTime) -> Event {
-        Event {
-            start: instant,
-            end: None,
-        }
+        Event::new_unchecked(instant, None)
     }
 
     /// Creates a new `Event` which spans from a `start` (inclusive) to an `end` (exclusive).
@@ -95,17 +92,14 @@ impl Event {
             return Err(Error::datetime_range("event", start..end));
         }
 
-        Ok(Event::new_unchecked(start, end))
+        Ok(Event::new_unchecked(start, Some(end)))
     }
 
-    /// Creates a new `Event` which spans from a `start` (inclusive) to an `end` (exclusive)
-    /// without checking that `end` is strictly greater than `start`.
+    /// Creates a new `Event` which spans from a `start` (inclusive) to an optional `end`
+    /// (exclusive) without checking that `end` is strictly greater than `start`.
     #[inline]
-    pub(crate) fn new_unchecked(start: DateTime, end: DateTime) -> Event {
-        Event {
-            start,
-            end: Some(end),
-        }
+    pub(crate) fn new_unchecked(start: DateTime, end: Option<DateTime>) -> Event {
+        Event { start, end }
     }
 
     /// Returns the `DateTime` at which the event starts.

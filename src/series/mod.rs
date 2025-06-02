@@ -450,7 +450,7 @@ where
     fn get_event_unchecked(&self, start: DateTime) -> Option<Event> {
         if self.event_duration.is_positive() {
             let end = start.checked_add(self.event_duration).ok()?;
-            Some(Event::new_unchecked(start, end))
+            Some(Event::new_unchecked(start, Some(end)))
         } else {
             Some(Event::at(start))
         }
