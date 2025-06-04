@@ -8,7 +8,7 @@ extern crate alloc;
 mod error;
 mod event;
 pub mod pattern;
-mod series;
+pub mod series;
 
 use core::ops::{Bound, Range, RangeBounds, RangeFrom, RangeInclusive, RangeTo, RangeToInclusive};
 pub use error::Error;
@@ -16,7 +16,8 @@ pub use event::Event;
 use jiff::civil::{Date, DateTime, time};
 use jiff::{ToSpan, Zoned};
 use pattern::Combined;
-pub use series::{Iter, Series, SeriesRange, SeriesSplit, SeriesWith, SplitMode};
+#[doc(inline)]
+pub use series::{Series, SeriesRange};
 
 mod private {
     pub trait Sealed {}

@@ -62,7 +62,8 @@ impl SeriesSplit {
     ///
     /// ```
     /// use jiff::{ToSpan, civil::{date, DateTime}};
-    /// use recurring::{Event, Series, SeriesSplit, SplitMode, pattern::hourly};
+    /// use recurring::{Event, Series, pattern::hourly};
+    /// use recurring::series::{SeriesSplit, SplitMode};
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let mut s1 = Series::new(start.., hourly(1));
