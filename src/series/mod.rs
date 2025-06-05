@@ -1,3 +1,4 @@
+//! A series of recurring events.
 mod iter;
 mod range;
 mod split;
@@ -483,7 +484,8 @@ where
     ///
     /// ```
     /// use jiff::{ToSpan, civil::{date, DateTime}};
-    /// use recurring::{Event, Series, SplitMode, pattern::hourly};
+    /// use recurring::{Event, Series, pattern::hourly};
+    /// use recurring::series::SplitMode;
     ///
     /// let start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let mut s1 = Series::new(start.., hourly(1));
