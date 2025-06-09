@@ -1,5 +1,5 @@
 use crate::pattern::Interval;
-use crate::{Error, Pattern, SeriesRange, private};
+use crate::{DateTimeRange, Error, Pattern, private};
 use jiff::{
     ToSpan,
     civil::{DateTime, Time},
@@ -86,9 +86,9 @@ impl Daily {
         self
     }
 
-    fn range_adjusted<F>(&self, f: F, instant: DateTime, range: SeriesRange) -> Option<DateTime>
+    fn range_adjusted<F>(&self, f: F, instant: DateTime, range: DateTimeRange) -> Option<DateTime>
     where
-        F: FnOnce(&Interval, DateTime, SeriesRange) -> Option<DateTime>,
+        F: FnOnce(&Interval, DateTime, DateTimeRange) -> Option<DateTime>,
     {
         let Some(time) = self.at else {
             return f(&self.interval, instant, range);
@@ -101,22 +101,22 @@ impl Daily {
         };
 
         let start = start.with().time(time).build().ok()?;
-        let range = SeriesRange::from(start..range.end);
+        let range = DateTimeRange::from(start..range.end);
 
         f(&self.interval, instant, range)
     }
 }
 
 impl Pattern for Daily {
-    fn next_after(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
+    fn next_after(&self, instant: DateTime, range: DateTimeRange) -> Option<DateTime> {
         self.range_adjusted(Interval::next_after, instant, range)
     }
 
-    fn previous_before(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
+    fn previous_before(&self, instant: DateTime, range: DateTimeRange) -> Option<DateTime> {
         self.range_adjusted(Interval::previous_before, instant, range)
     }
 
-    fn closest_to(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
+    fn closest_to(&self, instant: DateTime, range: DateTimeRange) -> Option<DateTime> {
         self.range_adjusted(Interval::closest_to, instant, range)
     }
 }

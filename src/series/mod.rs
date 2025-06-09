@@ -1,16 +1,14 @@
 //! A series of recurring events.
 mod iter;
-mod range;
 mod split;
 mod with;
 
 pub use iter::Iter;
-pub use range::SeriesRange;
 pub use split::{SeriesSplit, SplitMode};
 pub use with::SeriesWith;
 
 use crate::error::Error;
-use crate::{Event, Pattern, try_simplify_range};
+use crate::{DateTimeRange, Event, Pattern, try_simplify_range};
 use core::ops::RangeBounds;
 use jiff::{Span, civil::DateTime};
 
@@ -37,7 +35,7 @@ use jiff::{Span, civil::DateTime};
 #[derive(Debug, Clone)]
 pub struct Series<P> {
     pattern: P,
-    range: SeriesRange,
+    range: DateTimeRange,
     event_duration: Span,
 }
 

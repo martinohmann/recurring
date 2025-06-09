@@ -4,7 +4,7 @@ use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, Weekday, date};
 use pretty_assertions::assert_eq;
 use recurring::pattern::{Cron, cron};
-use recurring::{Event, Pattern, SeriesRange};
+use recurring::{DateTimeRange, Event, Pattern};
 
 #[test]
 fn cron_default() {
@@ -96,7 +96,7 @@ fn cron_weekdays() {
 
 #[test]
 fn cron_next_after() {
-    let range = SeriesRange::from(DateTime::MIN..DateTime::MAX);
+    let range = DateTimeRange::from(DateTime::MIN..DateTime::MAX);
     let pattern = Cron::new().minute(3).second(5).second(10);
 
     assert_eq!(
@@ -117,7 +117,7 @@ fn cron_next_after() {
 
 #[test]
 fn cron_previous_before() {
-    let range = SeriesRange::from(DateTime::MIN..DateTime::MAX);
+    let range = DateTimeRange::from(DateTime::MIN..DateTime::MAX);
     let pattern = Cron::new().minute(3).seconds([5, 10]);
 
     assert_eq!(
@@ -138,7 +138,7 @@ fn cron_previous_before() {
 
 #[test]
 fn cron_closest_to() {
-    let range = SeriesRange::from(DateTime::MIN..DateTime::MAX);
+    let range = DateTimeRange::from(DateTime::MIN..DateTime::MAX);
     let pattern = Cron::new().hour(1).minute(30).second(0);
 
     assert_eq!(
@@ -164,7 +164,7 @@ fn cron_closest_to() {
 
 #[test]
 fn cron_closest_to_datetime_max() {
-    let range = SeriesRange::from(DateTime::MIN..DateTime::MAX);
+    let range = DateTimeRange::from(DateTime::MIN..DateTime::MAX);
     let pattern = Cron::new().hour(1).minute(30).second(0);
 
     assert_eq!(

@@ -1,6 +1,6 @@
 use crate::error::{Error, err};
 use crate::pattern::utils::{advance_by_until, closest_to, pick_best};
-use crate::{Pattern, SeriesRange, private};
+use crate::{DateTimeRange, Pattern, private};
 use jiff::{Span, civil::DateTime};
 
 /// A fixed interval recurrence pattern.
@@ -132,7 +132,7 @@ impl Interval {
 }
 
 impl Pattern for Interval {
-    fn next_after(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
+    fn next_after(&self, instant: DateTime, range: DateTimeRange) -> Option<DateTime> {
         let start = self.add_offset(range.start)?;
         if start >= range.end {
             return None;
@@ -172,7 +172,7 @@ impl Pattern for Interval {
             .filter(|&next| next < range.end)
     }
 
-    fn previous_before(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
+    fn previous_before(&self, instant: DateTime, range: DateTimeRange) -> Option<DateTime> {
         let start = self.add_offset(range.start)?;
         if instant <= start || start >= range.end {
             return None;
@@ -189,7 +189,7 @@ impl Pattern for Interval {
             .filter(|&prev| prev >= start)
     }
 
-    fn closest_to(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
+    fn closest_to(&self, instant: DateTime, range: DateTimeRange) -> Option<DateTime> {
         let start = self.add_offset(range.start)?;
         if start >= range.end {
             return None;

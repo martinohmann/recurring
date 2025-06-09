@@ -2,13 +2,13 @@ use jiff::ToSpan;
 use jiff::civil::{DateTime, date, time};
 use pretty_assertions::assert_eq;
 use recurring::pattern::Daily;
-use recurring::{Pattern, SeriesRange};
+use recurring::{DateTimeRange, Pattern};
 
 #[test]
 fn daily_next_after() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 2, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let daily = Daily::new(2);
     assert_eq!(
         daily.next_after(DateTime::MIN, range),
@@ -42,7 +42,7 @@ fn daily_next_after() {
 fn daily_at_next_after() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 2, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let daily = Daily::new(2).at(time(12, 0, 0, 0));
     assert_eq!(
         daily.next_after(DateTime::MIN, range),
@@ -81,7 +81,7 @@ fn daily_at_next_after() {
 fn daily_previous_before() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 2, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let daily = Daily::new(2);
     assert_eq!(daily.previous_before(DateTime::MIN, range), None);
     assert_eq!(daily.previous_before(range.start(), range), None);
@@ -110,7 +110,7 @@ fn daily_previous_before() {
 fn daily_at_previous_before() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 2, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let daily = Daily::new(2).at(time(12, 0, 0, 0));
     assert_eq!(daily.previous_before(DateTime::MIN, range), None);
     assert_eq!(daily.previous_before(range.start(), range), None);
@@ -138,7 +138,7 @@ fn daily_at_previous_before() {
 fn daily_closest_to() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 2, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let daily = Daily::new(2);
 
     assert_eq!(
@@ -175,7 +175,7 @@ fn daily_closest_to() {
 #[test]
 fn daily_closest_to_datetime_max() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..DateTime::MAX);
+    let range = DateTimeRange::from(start..DateTime::MAX);
     let daily = Daily::new(2);
 
     assert_eq!(

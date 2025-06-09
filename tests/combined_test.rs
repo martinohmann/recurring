@@ -4,7 +4,7 @@ use common::{series_take, series_take_rev};
 use jiff::civil::{DateTime, date};
 use pretty_assertions::assert_eq;
 use recurring::pattern::{cron, hourly};
-use recurring::{Combine, Event, Pattern, SeriesRange};
+use recurring::{Combine, DateTimeRange, Event, Pattern};
 
 #[test]
 fn combined() {
@@ -54,7 +54,7 @@ fn combined() {
 fn combined_closest_to() {
     let start = date(2025, 1, 1).at(12, 0, 0, 0);
     let end = date(2025, 12, 31).at(12, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let pattern = cron()
         .hour(10)
         .minute(30)
