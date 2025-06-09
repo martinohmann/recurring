@@ -1,5 +1,5 @@
 use crate::pattern::utils::{closest_to, pick_best};
-use crate::{Pattern, SeriesRange, private};
+use crate::{DateTimeRange, Pattern, private};
 use core::cmp::Ord;
 use jiff::civil::DateTime;
 
@@ -36,19 +36,19 @@ where
     L: Pattern,
     R: Pattern,
 {
-    fn next_after(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
+    fn next_after(&self, instant: DateTime, range: DateTimeRange) -> Option<DateTime> {
         let left = self.left.next_after(instant, range);
         let right = self.right.next_after(instant, range);
         pick_best(left, right, Ord::min)
     }
 
-    fn previous_before(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
+    fn previous_before(&self, instant: DateTime, range: DateTimeRange) -> Option<DateTime> {
         let left = self.left.previous_before(instant, range);
         let right = self.right.previous_before(instant, range);
         pick_best(left, right, Ord::max)
     }
 
-    fn closest_to(&self, instant: DateTime, range: SeriesRange) -> Option<DateTime> {
+    fn closest_to(&self, instant: DateTime, range: DateTimeRange) -> Option<DateTime> {
         let left = self.left.closest_to(instant, range);
         let right = self.right.closest_to(instant, range);
         pick_best(left, right, |left, right| closest_to(instant, left, right))

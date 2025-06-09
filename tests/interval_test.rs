@@ -2,13 +2,13 @@ use jiff::ToSpan;
 use jiff::civil::{DateTime, date};
 use pretty_assertions::assert_eq;
 use recurring::pattern::Interval;
-use recurring::{Pattern, SeriesRange};
+use recurring::{DateTimeRange, Pattern};
 
 #[test]
 fn interval_next_after() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 1, 3).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let interval = Interval::new(1.hour());
     assert_eq!(
         interval.next_after(DateTime::MIN, range),
@@ -42,7 +42,7 @@ fn interval_next_after() {
 fn interval_offset_next_after() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 1, 3).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let interval = Interval::new(1.hour()).offset(10.minutes());
     assert_eq!(
         interval.next_after(DateTime::MIN, range),
@@ -92,7 +92,7 @@ fn interval_offset_next_after() {
 fn interval_previous_before() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 1, 3).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let interval = Interval::new(1.hour());
     assert_eq!(interval.previous_before(DateTime::MIN, range), None);
     assert_eq!(interval.previous_before(range.start(), range), None);
@@ -121,7 +121,7 @@ fn interval_previous_before() {
 fn interval_offset_previous_before() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 1, 3).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let interval = Interval::new(1.hour()).offset(30.minutes());
     assert_eq!(interval.previous_before(DateTime::MIN, range), None);
     assert_eq!(interval.previous_before(range.start(), range), None);
@@ -154,7 +154,7 @@ fn interval_offset_previous_before() {
 fn interval_closest_to() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 1, 3).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..end);
+    let range = DateTimeRange::from(start..end);
     let interval = Interval::new(1.hour());
 
     assert_eq!(
@@ -191,7 +191,7 @@ fn interval_closest_to() {
 #[test]
 fn interval_offset_closest_to() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..DateTime::MAX);
+    let range = DateTimeRange::from(start..DateTime::MAX);
     let interval = Interval::new(1.hour()).offset(5.minutes());
 
     assert_eq!(
@@ -207,7 +207,7 @@ fn interval_offset_closest_to() {
 #[test]
 fn interval_closest_to_datetime_max() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..DateTime::MAX);
+    let range = DateTimeRange::from(start..DateTime::MAX);
     let interval = Interval::new(2.hours());
 
     assert_eq!(
@@ -219,7 +219,7 @@ fn interval_closest_to_datetime_max() {
 #[test]
 fn interval_subsec_units() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..DateTime::MAX);
+    let range = DateTimeRange::from(start..DateTime::MAX);
     let interval = Interval::new(100.milliseconds().nanoseconds(100));
 
     assert_eq!(
@@ -236,7 +236,7 @@ fn interval_subsec_units() {
 #[test]
 fn interval_offset_zero() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
-    let range = SeriesRange::from(start..DateTime::MAX);
+    let range = DateTimeRange::from(start..DateTime::MAX);
     let interval = Interval::new(2.hours()).offset(0.seconds());
 
     assert_eq!(

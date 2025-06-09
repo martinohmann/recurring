@@ -9,7 +9,7 @@ use jiff::civil::DateTime;
 /// instantiate values of this type unless you want to interact with methods of the `Pattern` trait
 /// directly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SeriesRange {
+pub struct DateTimeRange {
     /// The lower bound of the series (inclusive).
     pub(crate) start: DateTime,
     /// The upper bound of the series (exclusive).
@@ -21,11 +21,11 @@ pub struct SeriesRange {
     pub(crate) fixpoint: Option<DateTime>,
 }
 
-impl SeriesRange {
-    /// Creates a new `SeriesRange` from a start (inclusive) and an end (exclusive).
+impl DateTimeRange {
+    /// Creates a new `DateTimeRange` from a start (inclusive) and an end (exclusive).
     #[inline]
-    pub(crate) const fn new(start: DateTime, end: DateTime) -> SeriesRange {
-        SeriesRange {
+    pub(crate) const fn new(start: DateTime, end: DateTime) -> DateTimeRange {
+        DateTimeRange {
             start,
             end,
             fixpoint: None,
@@ -41,7 +41,7 @@ impl SeriesRange {
     ///
     /// Returns an error if `fixpoint` is greater than the range start.
     #[inline]
-    pub(crate) fn with_fixpoint(mut self, fixpoint: DateTime) -> Result<SeriesRange, Error> {
+    pub(crate) fn with_fixpoint(mut self, fixpoint: DateTime) -> Result<DateTimeRange, Error> {
         if fixpoint > self.start {
             return Err(err!(
                 "fixpoint ({fixpoint}) must be less than or equal to range start ({})",
@@ -54,8 +54,8 @@ impl SeriesRange {
 
     /// Returns the (inclusive) fixpoint for relative recurrence patterns.
     ///
-    /// Unless [`SeriesRange::with_fixpoint`] was called with a specific value, this returns the
-    /// same value as [`SeriesRange::start`].
+    /// Unless [`DateTimeRange::with_fixpoint`] was called with a specific value, this returns the
+    /// same value as [`DateTimeRange::start`].
     #[inline]
     pub(crate) fn fixpoint(&self) -> DateTime {
         self.fixpoint.unwrap_or(self.start)
@@ -74,7 +74,7 @@ impl SeriesRange {
     }
 }
 
-impl RangeBounds<DateTime> for SeriesRange {
+impl RangeBounds<DateTime> for DateTimeRange {
     fn start_bound(&self) -> Bound<&DateTime> {
         Bound::Included(&self.start)
     }
@@ -84,14 +84,14 @@ impl RangeBounds<DateTime> for SeriesRange {
     }
 }
 
-impl From<SeriesRange> for Range<DateTime> {
-    fn from(range: SeriesRange) -> Self {
+impl From<DateTimeRange> for Range<DateTime> {
+    fn from(range: DateTimeRange) -> Self {
         range.start..range.end
     }
 }
 
-impl From<Range<DateTime>> for SeriesRange {
+impl From<Range<DateTime>> for DateTimeRange {
     fn from(range: Range<DateTime>) -> Self {
-        SeriesRange::new(range.start, range.end)
+        DateTimeRange::new(range.start, range.end)
     }
 }
