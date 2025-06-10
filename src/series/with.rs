@@ -1,5 +1,5 @@
 use crate::error::{Error, err};
-use crate::series::{DateTimeRange, Series, SeriesCore};
+use crate::series::{Series, SeriesCore};
 use crate::{IntoBounds, Pattern, try_simplify_range};
 use core::ops::{Bound, RangeBounds};
 use jiff::{Span, civil::DateTime};
@@ -249,14 +249,12 @@ where
         }
 
         if range.start >= range.end {
-            return Err(Error::datetime_range("series", range));
+            return Err(Error::datetime_range("series", range.into()));
         }
 
-        let range = if let Some(fixpoint) = self.fixpoint {
-            DateTimeRange::from(range).with_fixpoint(fixpoint)?
-        } else {
-            range.into()
-        };
+        if let Some(fixpoint) = self.fixpoint {
+            range = range.with_fixpoint(fixpoint)?;
+        }
 
         Ok(Series {
             core: SeriesCore::new(self.pattern, self.event_duration),

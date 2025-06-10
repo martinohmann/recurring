@@ -52,6 +52,24 @@ impl DateTimeRange {
         Ok(self)
     }
 
+    /// Intersects `self` with `other`, creating a new `DateTimeRange` of the overlap.
+    ///
+    /// The returned `DateTimeRange` inherits the fixpoint from `self`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the resulting `DateTimeRange` would have a `start >= end`.
+    #[inline]
+    pub(crate) fn intersect(&self, other: DateTimeRange) -> Result<DateTimeRange, Error> {
+        let start = self.start.max(other.start);
+        let end = self.end.min(other.end);
+        if start >= end {
+            return Err(Error::datetime_range("series intersection", start..end));
+        }
+
+        DateTimeRange::new(start, end).with_fixpoint(self.fixpoint())
+    }
+
     /// Returns the (inclusive) fixpoint for relative recurrence patterns.
     ///
     /// Unless [`DateTimeRange::with_fixpoint`] was called with a specific value, this returns the

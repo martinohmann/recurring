@@ -1,7 +1,7 @@
 #![no_std]
 #![allow(missing_docs)] // @TODO(mohmann): enable warnings once API is fleshed out.
 #![warn(clippy::pedantic)]
-#![allow(clippy::must_use_candidate)]
+#![allow(clippy::must_use_candidate, clippy::struct_field_names)]
 
 extern crate alloc;
 
@@ -345,8 +345,8 @@ impl<B: RangeBounds<T>, T: Clone> IntoBounds<T> for B {
     }
 }
 
-// Tries to simplify arbitrary range bounds into a `Range<DateTime>`.
-fn try_simplify_range<B: RangeBounds<DateTime>>(bounds: B) -> Result<Range<DateTime>, Error> {
+// Tries to simplify arbitrary range bounds into a `DateTimeRange`.
+fn try_simplify_range<B: RangeBounds<DateTime>>(bounds: B) -> Result<DateTimeRange, Error> {
     let start = match bounds.start_bound() {
         Bound::Unbounded => DateTime::MIN,
         Bound::Included(start) => *start,
@@ -359,5 +359,5 @@ fn try_simplify_range<B: RangeBounds<DateTime>>(bounds: B) -> Result<Range<DateT
         Bound::Excluded(end) => *end,
     };
 
-    Ok(start..end)
+    Ok(DateTimeRange::new(start, end))
 }
