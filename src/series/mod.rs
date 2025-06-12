@@ -1,11 +1,13 @@
 //! A series of recurring events.
 mod core;
 mod iter;
+mod range;
 mod split;
 mod with;
 
 use core::SeriesCore;
 pub use iter::Iter;
+pub use range::Range;
 pub use split::{SeriesSplit, SplitMode};
 pub use with::SeriesWith;
 
@@ -96,12 +98,12 @@ where
     pub fn try_new<B: RangeBounds<DateTime>>(range: B, pattern: P) -> Result<Series<P>, Error> {
         let range = try_simplify_range(range)?;
         if range.start >= range.end {
-            return Err(Error::datetime_range("series", range));
+            return Err(Error::datetime_range("series", range.into()));
         }
 
         Ok(Series {
             core: SeriesCore::new(pattern, Span::new()),
-            range: range.into(),
+            range,
         })
     }
 
@@ -178,17 +180,95 @@ where
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
-    /// let mut events = series.iter();
+    /// let mut iter = series.iter();
     ///
-    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
-    /// assert_eq!(events.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
+    /// assert_eq!(iter.next(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(iter.next(), Some(Event::at(date(2025, 1, 1).at(2, 0, 0, 0))));
     ///
     /// // Get events from the end of the series.
-    /// assert_eq!(events.next_back(), Some(Event::at(date(9999, 12, 31).at(22, 0, 0, 0))));
-    /// assert_eq!(events.next_back(), Some(Event::at(date(9999, 12, 31).at(20, 0, 0, 0))));
+    /// assert_eq!(iter.next_back(), Some(Event::at(date(9999, 12, 31).at(22, 0, 0, 0))));
+    /// assert_eq!(iter.next_back(), Some(Event::at(date(9999, 12, 31).at(20, 0, 0, 0))));
     /// ```
     pub fn iter(&self) -> Iter<'_, P> {
         Iter::new(self)
+    }
+
+    /// Creates an iterator over a sub-range of the events in a the series.
+    ///
+    /// The returned iterator will iterate over the intersection of the provided range and the
+    /// series' original range.
+    ///
+    /// The fallible version of this method is [`Series::try_range`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the start or end of the range bounds would overflow `DateTime::MAX` after
+    /// normalization or if `start` >= `end`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jiff::civil::date;
+    /// use recurring::{Event, Series, pattern::hourly};
+    ///
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
+    ///
+    /// let range = date(2026, 1, 1).at(12, 34, 56, 0)..date(2027, 1, 1).at(12, 34, 56, 0);
+    /// let mut iter = series.range(range);
+    ///
+    /// assert_eq!(iter.next(), Some(Event::at(date(2026, 1, 1).at(14, 0, 0, 0))));
+    /// assert_eq!(iter.next(), Some(Event::at(date(2026, 1, 1).at(16, 0, 0, 0))));
+    ///
+    /// // Get events from the end of the series sub-range.
+    /// assert_eq!(iter.next_back(), Some(Event::at(date(2027, 1, 1).at(12, 0, 0, 0))));
+    /// assert_eq!(iter.next_back(), Some(Event::at(date(2027, 1, 1).at(10, 0, 0, 0))));
+    /// ```
+    #[inline]
+    pub fn range<B: RangeBounds<DateTime>>(&self, range: B) -> Range<'_, P> {
+        self.try_range(range).expect("invalid range bounds")
+    }
+
+    /// Creates an iterator over a sub-range of the events in a the series.
+    ///
+    /// The returned iterator will iterate over the intersection of the provided range and the
+    /// series' original range.
+    ///
+    /// The panicking version of this method is [`Series::range`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Error` if the start or end of the range bounds would overflow `DateTime::MAX`
+    /// after normalization or if `start` >= `end`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jiff::civil::date;
+    /// use recurring::{Event, Series, pattern::hourly};
+    ///
+    /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
+    ///
+    /// let range = date(2026, 1, 1).at(12, 34, 56, 0)..date(2027, 1, 1).at(12, 34, 56, 0);
+    /// let mut iter = series.try_range(range)?;
+    ///
+    /// assert_eq!(iter.next(), Some(Event::at(date(2026, 1, 1).at(14, 0, 0, 0))));
+    /// assert_eq!(iter.next(), Some(Event::at(date(2026, 1, 1).at(16, 0, 0, 0))));
+    ///
+    /// // Get events from the end of the series sub-range.
+    /// assert_eq!(iter.next_back(), Some(Event::at(date(2027, 1, 1).at(12, 0, 0, 0))));
+    /// assert_eq!(iter.next_back(), Some(Event::at(date(2027, 1, 1).at(10, 0, 0, 0))));
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    #[inline]
+    pub fn try_range<B: RangeBounds<DateTime>>(&self, range: B) -> Result<Range<'_, P>, Error> {
+        let mut range = try_simplify_range(range)?;
+        if self.event_duration().is_positive() {
+            range.end = range.end.checked_sub(self.event_duration())?;
+        }
+
+        self.range
+            .intersect(range)
+            .map(|range| Range::new(&self.core, range))
     }
 
     /// Gets the first event in the series.

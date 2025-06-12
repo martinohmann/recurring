@@ -10,7 +10,7 @@ use recurring::pattern::{daily, hourly, monthly, yearly};
 use recurring::{Combine, Event, Series};
 
 #[test]
-fn series_range() {
+fn series_bounds() {
     let series = Series::new(.., daily(1));
     assert_eq!(series.start(), DateTime::MIN);
     assert_eq!(series.end(), DateTime::MAX);
@@ -377,4 +377,56 @@ fn series_with_fixpoint() {
             Event::at(date(9999, 8, 28).at(12, 34, 56, 0)),
         ]
     );
+}
+
+#[test]
+fn series_range() {
+    let start = date(2024, 1, 1).at(0, 0, 0, 0);
+    let fixpoint = date(2023, 12, 30).at(12, 34, 56, 0);
+    let series = Series::new(start.., monthly(1))
+        .with()
+        .fixpoint(fixpoint)
+        .build()
+        .unwrap();
+
+    let range = date(2024, 2, 1).at(12, 0, 0, 0)..date(2024, 5, 29).at(12, 0, 0, 0);
+    let events: Vec<_> = series.range(range).take(5).collect();
+
+    assert_eq!(
+        events,
+        vec![
+            Event::at(date(2024, 2, 29).at(12, 34, 56, 0)),
+            Event::at(date(2024, 3, 29).at(12, 34, 56, 0)),
+            Event::at(date(2024, 4, 29).at(12, 34, 56, 0)),
+        ]
+    );
+
+    let series = series.with().event_duration(1.hour()).build().unwrap();
+
+    let events: Vec<_> = series
+        .try_range(DateTime::MAX - 2.months()..)
+        .unwrap()
+        .take(5)
+        .collect();
+
+    assert_eq!(
+        events,
+        vec![
+            Event::new(
+                date(9999, 11, 28).at(12, 34, 56, 0),
+                date(9999, 11, 28).at(13, 34, 56, 0)
+            ),
+            Event::new(
+                date(9999, 12, 28).at(12, 34, 56, 0),
+                date(9999, 12, 28).at(13, 34, 56, 0)
+            ),
+        ]
+    );
+    assert!(
+        series
+            .try_range(DateTime::MAX - 1.hour().seconds(1)..)
+            .is_ok()
+    );
+    assert!(series.try_range(DateTime::MAX - 1.hour()..).is_err());
+    assert!(series.try_range(DateTime::MAX..).is_err());
 }
