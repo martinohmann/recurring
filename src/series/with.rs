@@ -1,5 +1,5 @@
 use crate::error::{Error, err};
-use crate::series::{DateTimeRange, Series};
+use crate::series::{DateTimeRange, Series, SeriesCore};
 use crate::{IntoBounds, Pattern, try_simplify_range};
 use core::ops::{Bound, RangeBounds};
 use jiff::{Span, civil::DateTime};
@@ -36,10 +36,10 @@ where
     /// Creates a new `SeriesWith` from a `Series`.
     pub(crate) fn new(series: Series<P>) -> SeriesWith<P> {
         SeriesWith {
-            pattern: series.pattern,
+            pattern: series.core.pattern,
             bounds: series.range.into_bounds(),
             fixpoint: series.range.fixpoint,
-            event_duration: series.event_duration,
+            event_duration: series.core.event_duration,
         }
     }
 
@@ -259,9 +259,8 @@ where
         };
 
         Ok(Series {
-            pattern: self.pattern,
+            core: SeriesCore::new(self.pattern, self.event_duration),
             range,
-            event_duration: self.event_duration,
         })
     }
 }

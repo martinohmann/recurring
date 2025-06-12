@@ -1,15 +1,17 @@
 //! A series of recurring events.
+mod core;
 mod iter;
 mod split;
 mod with;
 
+use core::SeriesCore;
 pub use iter::Iter;
 pub use split::{SeriesSplit, SplitMode};
 pub use with::SeriesWith;
 
 use crate::error::Error;
 use crate::{DateTimeRange, Event, Pattern, try_simplify_range};
-use core::ops::RangeBounds;
+use ::core::ops::RangeBounds;
 use jiff::{Span, civil::DateTime};
 
 /// A series of recurring events.
@@ -34,9 +36,8 @@ use jiff::{Span, civil::DateTime};
 /// ```
 #[derive(Debug, Clone)]
 pub struct Series<P> {
-    pattern: P,
+    core: SeriesCore<P>,
     range: DateTimeRange,
-    event_duration: Span,
 }
 
 impl<P> Series<P>
@@ -99,9 +100,8 @@ where
         }
 
         Ok(Series {
-            pattern,
+            core: SeriesCore::new(pattern, Span::new()),
             range: range.into(),
-            event_duration: Span::new(),
         })
     }
 
@@ -160,12 +160,12 @@ where
     ///
     /// If this is zero, events will not have an end date.
     pub fn event_duration(&self) -> Span {
-        self.event_duration
+        self.core.event_duration()
     }
 
     /// Returns a reference to the recurrence pattern used by the series.
     pub fn pattern(&self) -> &P {
-        &self.pattern
+        self.core.pattern()
     }
 
     /// Creates an iterator over the events in a the series.
@@ -263,10 +263,7 @@ where
     /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
     pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        self.pattern
-            .closest_to(instant, self.range)
-            .filter(|&start| start == instant)
-            .and_then(|start| self.get_event_unchecked(start))
+        self.core.get_event(instant, self.range)
     }
 
     /// Gets the event containing `instant`.
@@ -310,12 +307,7 @@ where
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn get_event_containing(&self, instant: DateTime) -> Option<Event> {
-        self.pattern
-            .closest_to(instant, self.range)
-            .filter(|&start| start <= instant)
-            .or_else(|| self.pattern.previous_before(instant, self.range))
-            .and_then(|start| self.get_event_unchecked(start))
-            .filter(|event| event.contains(instant))
+        self.core.get_event_containing(instant, self.range)
     }
 
     /// Gets the next event after `instant`.
@@ -360,9 +352,7 @@ where
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
-        self.pattern
-            .next_after(instant, self.range)
-            .and_then(|next| self.get_event_unchecked(next))
+        self.core.get_event_after(instant, self.range)
     }
 
     /// Gets the previous event before `instant`.
@@ -398,9 +388,7 @@ where
     /// );
     /// ```
     pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
-        self.pattern
-            .previous_before(instant, self.range)
-            .and_then(|previous| self.get_event_unchecked(previous))
+        self.core.get_event_before(instant, self.range)
     }
 
     /// Gets the series event with the start time closest to `instant`.
@@ -434,9 +422,7 @@ where
     /// );
     /// ```
     pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
-        self.pattern
-            .closest_to(instant, self.range)
-            .and_then(|closest| self.get_event_unchecked(closest))
+        self.core.get_closest_event(instant, self.range)
     }
 
     /// Splits off a part of the series.
@@ -501,24 +487,6 @@ where
     pub fn split_off<S: Into<SeriesSplit>>(&mut self, options: S) -> Result<Series<P>, Error> {
         let options: SeriesSplit = options.into();
         options.split_off(self)
-    }
-}
-
-// Internal APIs.
-impl<P> Series<P>
-where
-    P: Pattern,
-{
-    /// Get an event without any bound checks. The datetime at `start` is assumed to be aligned to
-    /// the series and within the series start and end bounds.
-    #[inline]
-    fn get_event_unchecked(&self, start: DateTime) -> Option<Event> {
-        if self.event_duration.is_positive() {
-            let end = start.checked_add(self.event_duration).ok()?;
-            Some(Event::new_unchecked(start, Some(end)))
-        } else {
-            Some(Event::at(start))
-        }
     }
 }
 

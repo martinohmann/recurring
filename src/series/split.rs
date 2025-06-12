@@ -107,15 +107,15 @@ impl SeriesSplit {
                 }
             }
             SplitMode::NextAfter => series
-                .pattern
+                .pattern()
                 .next_after(self.instant, series.range)
                 .ok_or_else(|| err!("no series event after {}", self.instant)),
             SplitMode::PreviousBefore => series
-                .pattern
+                .pattern()
                 .previous_before(self.instant, series.range)
                 .ok_or_else(|| err!("no series event before {}", self.instant)),
             SplitMode::ClosestTo => series
-                .pattern
+                .pattern()
                 .closest_to(self.instant, series.range)
                 .ok_or_else(|| err!("no series event close to {}", self.instant)),
         }
