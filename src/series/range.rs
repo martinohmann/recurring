@@ -37,9 +37,9 @@ where
         let cursor = self.cursor_front.take()?;
         let event = if self.first {
             self.first = false;
-            self.core.get_closest_event(cursor, self.range)?
+            self.core.get_closest_to(cursor, self.range)?
         } else {
-            self.core.get_event_after(cursor, self.range)?
+            self.core.get_next_after(cursor, self.range)?
         };
 
         self.cursor_front = Some(event.start());
@@ -53,7 +53,7 @@ where
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         let cursor = self.cursor_back.take()?;
-        let event = self.core.get_event_before(cursor, self.range)?;
+        let event = self.core.get_previous_before(cursor, self.range)?;
         self.cursor_back = Some(event.start());
         Some(event)
     }

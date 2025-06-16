@@ -32,7 +32,7 @@ where
     }
 
     #[inline]
-    pub(crate) fn get_event(&self, instant: DateTime, range: DateTimeRange) -> Option<Event> {
+    pub(crate) fn get(&self, instant: DateTime, range: DateTimeRange) -> Option<Event> {
         self.pattern
             .closest_to(instant, range)
             .filter(|&start| start == instant)
@@ -40,7 +40,7 @@ where
     }
 
     #[inline]
-    pub fn get_event_containing(&self, instant: DateTime, range: DateTimeRange) -> Option<Event> {
+    pub fn get_containing(&self, instant: DateTime, range: DateTimeRange) -> Option<Event> {
         self.pattern
             .closest_to(instant, range)
             .filter(|&start| start <= instant)
@@ -50,14 +50,14 @@ where
     }
 
     #[inline]
-    pub(crate) fn get_event_after(&self, instant: DateTime, range: DateTimeRange) -> Option<Event> {
+    pub(crate) fn get_next_after(&self, instant: DateTime, range: DateTimeRange) -> Option<Event> {
         self.pattern
             .next_after(instant, range)
             .and_then(|next| self.get_event_unchecked(next))
     }
 
     #[inline]
-    pub(crate) fn get_event_before(
+    pub(crate) fn get_previous_before(
         &self,
         instant: DateTime,
         range: DateTimeRange,
@@ -68,11 +68,7 @@ where
     }
 
     #[inline]
-    pub(crate) fn get_closest_event(
-        &self,
-        instant: DateTime,
-        range: DateTimeRange,
-    ) -> Option<Event> {
+    pub(crate) fn get_closest_to(&self, instant: DateTime, range: DateTimeRange) -> Option<Event> {
         self.pattern
             .closest_to(instant, range)
             .and_then(|closest| self.get_event_unchecked(closest))

@@ -281,10 +281,10 @@ where
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
-    /// assert_eq!(series.first_event(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
+    /// assert_eq!(series.first(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
     /// ```
-    pub fn first_event(&self) -> Option<Event> {
-        self.get_closest_event(self.range.start)
+    pub fn first(&self) -> Option<Event> {
+        self.get_closest_to(self.range.start)
     }
 
     /// Gets the last event in the series.
@@ -303,11 +303,11 @@ where
     ///
     /// let series = Series::new(start..end, hourly(2));
     ///
-    /// assert_eq!(series.last_event(), Some(Event::at(date(2025, 12, 31).at(22, 0, 0, 0))));
+    /// assert_eq!(series.last(), Some(Event::at(date(2025, 12, 31).at(22, 0, 0, 0))));
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
-    pub fn last_event(&self) -> Option<Event> {
-        self.get_event_before(self.range.end)
+    pub fn last(&self) -> Option<Event> {
+        self.get_previous_before(self.range.end)
     }
 
     /// Returns `true` when the series contains an event starting at `instant`.
@@ -320,11 +320,11 @@ where
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
-    /// assert!(!series.contains_event(date(2025, 1, 1).at(0, 35, 0, 0)));
-    /// assert!(series.contains_event(date(2025, 2, 10).at(12, 0, 0, 0)));
+    /// assert!(!series.contains(date(2025, 1, 1).at(0, 35, 0, 0)));
+    /// assert!(series.contains(date(2025, 2, 10).at(12, 0, 0, 0)));
     /// ```
-    pub fn contains_event(&self, instant: DateTime) -> bool {
-        self.get_event(instant).is_some()
+    pub fn contains(&self, instant: DateTime) -> bool {
+        self.get(instant).is_some()
     }
 
     /// Gets an event in the series.
@@ -339,11 +339,11 @@ where
     ///
     /// let series = Series::new(date(2025, 1, 1).at(0, 0, 0, 0).., hourly(2));
     ///
-    /// assert!(series.get_event(date(2025, 1, 1).at(1, 0, 0, 0)).is_none());
-    /// assert!(series.get_event(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
+    /// assert!(series.get(date(2025, 1, 1).at(1, 0, 0, 0)).is_none());
+    /// assert!(series.get(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
-    pub fn get_event(&self, instant: DateTime) -> Option<Event> {
-        self.core.get_event(instant, self.range)
+    pub fn get(&self, instant: DateTime) -> Option<Event> {
+        self.core.get(instant, self.range)
     }
 
     /// Gets the event containing `instant`.
@@ -365,29 +365,29 @@ where
     ///     .build()?;
     ///
     /// assert_eq!(
-    ///     series.get_event_containing(series_start - 1.minute()),
+    ///     series.get_containing(series_start - 1.minute()),
     ///     None,
     /// );
     /// assert_eq!(
-    ///     series.get_event_containing(series_start),
+    ///     series.get_containing(series_start),
     ///     Some(Event::new(series_start, series_start + 30.minutes())),
     /// );
     /// assert_eq!(
-    ///     series.get_event_containing(series_start + 31.minutes()),
+    ///     series.get_containing(series_start + 31.minutes()),
     ///     None,
     /// );
     /// assert_eq!(
-    ///     series.get_event_containing(series_start + 1.hour().minutes(20)),
+    ///     series.get_containing(series_start + 1.hour().minutes(20)),
     ///     Some(Event::new(series_start + 1.hour(), series_start + 1.hour().minutes(30))),
     /// );
     /// assert_eq!(
-    ///     series.get_event_containing(series_end),
+    ///     series.get_containing(series_end),
     ///     None,
     /// );
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
-    pub fn get_event_containing(&self, instant: DateTime) -> Option<Event> {
-        self.core.get_event_containing(instant, self.range)
+    pub fn get_containing(&self, instant: DateTime) -> Option<Event> {
+        self.core.get_containing(instant, self.range)
     }
 
     /// Gets the next event after `instant`.
@@ -406,33 +406,33 @@ where
     /// let series = Series::new(series_start..series_end, hourly(1));
     ///
     /// assert_eq!(
-    ///     series.get_event_after(series_start - 1.minute()),
+    ///     series.get_next_after(series_start - 1.minute()),
     ///     Some(Event::at(series_start)),
     /// );
     /// assert_eq!(
-    ///     series.get_event_after(series_start),
+    ///     series.get_next_after(series_start),
     ///     Some(Event::at(series_start + 1.hour())),
     /// );
     /// assert_eq!(
-    ///     series.get_event_after(series_start + 1.minute()),
+    ///     series.get_next_after(series_start + 1.minute()),
     ///     Some(Event::at(series_start + 1.hour())),
     /// );
     /// assert_eq!(
-    ///     series.get_event_after(series_end - 1.hour().minutes(1)),
+    ///     series.get_next_after(series_end - 1.hour().minutes(1)),
     ///     Some(Event::at(series_end - 1.hour())),
     /// );
     /// assert_eq!(
-    ///     series.get_event_after(series_end - 1.hour()),
+    ///     series.get_next_after(series_end - 1.hour()),
     ///     None,
     /// );
     /// assert_eq!(
-    ///     series.get_event_after(series_end),
+    ///     series.get_next_after(series_end),
     ///     None,
     /// );
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
-    pub fn get_event_after(&self, instant: DateTime) -> Option<Event> {
-        self.core.get_event_after(instant, self.range)
+    pub fn get_next_after(&self, instant: DateTime) -> Option<Event> {
+        self.core.get_next_after(instant, self.range)
     }
 
     /// Gets the previous event before `instant`.
@@ -448,27 +448,27 @@ where
     /// let series_start = date(2025, 1, 1).at(0, 0, 0, 0);
     /// let series = Series::new(series_start.., hourly(1));
     ///
-    /// assert_eq!(series.get_event_before(series_start), None);
-    /// assert_eq!(series.get_event_before(series_start - 1.minute()), None);
+    /// assert_eq!(series.get_previous_before(series_start), None);
+    /// assert_eq!(series.get_previous_before(series_start - 1.minute()), None);
     /// assert_eq!(
-    ///     series.get_event_before(series_start + 29.minute()),
+    ///     series.get_previous_before(series_start + 29.minute()),
     ///     Some(Event::at(series_start)),
     /// );
     /// assert_eq!(
-    ///     series.get_event_before(series_start + 1.hour()),
+    ///     series.get_previous_before(series_start + 1.hour()),
     ///     Some(Event::at(series_start)),
     /// );
     /// assert_eq!(
-    ///     series.get_event_before(series_start + 1.hour().seconds(1)),
+    ///     series.get_previous_before(series_start + 1.hour().seconds(1)),
     ///     Some(Event::at(series_start + 1.hour())),
     /// );
     /// assert_eq!(
-    ///     series.get_event_before(DateTime::MAX),
+    ///     series.get_previous_before(DateTime::MAX),
     ///     Some(Event::at(date(9999, 12, 31).at(23, 0, 0, 0))),
     /// );
     /// ```
-    pub fn get_event_before(&self, instant: DateTime) -> Option<Event> {
-        self.core.get_event_before(instant, self.range)
+    pub fn get_previous_before(&self, instant: DateTime) -> Option<Event> {
+        self.core.get_previous_before(instant, self.range)
     }
 
     /// Gets the series event with the start time closest to `instant`.
@@ -485,24 +485,24 @@ where
     /// let series = Series::new(series_start.., hourly(1));
     ///
     /// assert_eq!(
-    ///     series.get_closest_event(series_start),
+    ///     series.get_closest_to(series_start),
     ///     Some(Event::at(series_start)),
     /// );
     /// assert_eq!(
-    ///     series.get_closest_event(series_start - 1.minute()),
+    ///     series.get_closest_to(series_start - 1.minute()),
     ///     Some(Event::at(series_start)),
     /// );
     /// assert_eq!(
-    ///     series.get_closest_event(series_start + 29.minutes()),
+    ///     series.get_closest_to(series_start + 29.minutes()),
     ///     Some(Event::at(series_start)),
     /// );
     /// assert_eq!(
-    ///     series.get_closest_event(series_start + 30.minutes()),
+    ///     series.get_closest_to(series_start + 30.minutes()),
     ///     Some(Event::at(series_start + 1.hour())),
     /// );
     /// ```
-    pub fn get_closest_event(&self, instant: DateTime) -> Option<Event> {
-        self.core.get_closest_event(instant, self.range)
+    pub fn get_closest_to(&self, instant: DateTime) -> Option<Event> {
+        self.core.get_closest_to(instant, self.range)
     }
 
     /// Splits off a part of the series.
@@ -539,7 +539,7 @@ where
     ///
     /// let s2 = s1.split_off(cutoff_point)?;
     ///
-    /// assert_eq!(s2.first_event(), Some(Event::at(date(2025, 4, 1).at(13, 0, 0, 0))));
+    /// assert_eq!(s2.first(), Some(Event::at(date(2025, 4, 1).at(13, 0, 0, 0))));
     /// assert_eq!(s1.end(), cutoff_point);
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
@@ -559,7 +559,7 @@ where
     /// // Use `SplitMode::NextAfter` to split at the next event after `instant`.
     /// let s2 = s1.split_off((SplitMode::NextAfter, instant))?;
     ///
-    /// assert_eq!(s2.first_event(), Some(Event::at(date(2025, 4, 1).at(13, 0, 0, 0))));
+    /// assert_eq!(s2.first(), Some(Event::at(date(2025, 4, 1).at(13, 0, 0, 0))));
     /// assert_eq!(s1.end(), date(2025, 4, 1).at(13, 0, 0, 0));
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
