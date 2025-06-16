@@ -126,7 +126,7 @@ fn series_daily_with_end_and_duration() {
 }
 
 #[test]
-fn series_contains_event() {
+fn series_contains() {
     let start = datetime(2025, 1, 1, 1, 1, 1, 0);
     let series = Series::new(
         start..,
@@ -134,11 +134,11 @@ fn series_contains_event() {
             .at(time(2, 2, 2, 2))
             .and(daily(2).at(time(3, 3, 3, 3))),
     );
-    assert!(!series.contains_event(datetime(2025, 1, 1, 1, 1, 1, 0)));
-    assert!(series.contains_event(datetime(2025, 1, 1, 2, 2, 2, 2)));
-    assert!(series.contains_event(datetime(2025, 1, 1, 3, 3, 3, 3)));
-    assert!(!series.contains_event(datetime(2025, 1, 1, 2, 2, 2, 3)));
-    assert!(!series.contains_event(datetime(2025, 1, 1, 3, 3, 3, 2)));
+    assert!(!series.contains(datetime(2025, 1, 1, 1, 1, 1, 0)));
+    assert!(series.contains(datetime(2025, 1, 1, 2, 2, 2, 2)));
+    assert!(series.contains(datetime(2025, 1, 1, 3, 3, 3, 3)));
+    assert!(!series.contains(datetime(2025, 1, 1, 2, 2, 2, 3)));
+    assert!(!series.contains(datetime(2025, 1, 1, 3, 3, 3, 2)));
 }
 
 #[test]
@@ -151,43 +151,43 @@ fn series_relative_events() {
             .at(time(2, 2, 2, 2))
             .and(daily(2).at(time(3, 3, 3, 3))),
     );
-    assert_eq!(series.get_event(datetime(2025, 1, 1, 1, 1, 1, 0)), None);
+    assert_eq!(series.get(datetime(2025, 1, 1, 1, 1, 1, 0)), None);
     assert_eq!(
-        series.get_event(datetime(2025, 1, 1, 2, 2, 2, 2)),
+        series.get(datetime(2025, 1, 1, 2, 2, 2, 2)),
         Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)))
     );
 
     assert_eq!(
-        series.get_event_after(datetime(2025, 1, 1, 2, 2, 2, 2)),
+        series.get_next_after(datetime(2025, 1, 1, 2, 2, 2, 2)),
         Some(Event::at(datetime(2025, 1, 1, 3, 3, 3, 3)))
     );
 
     assert_eq!(
-        series.get_event_before(datetime(2025, 1, 1, 2, 2, 2, 2)),
+        series.get_previous_before(datetime(2025, 1, 1, 2, 2, 2, 2)),
         None
     );
 
     assert_eq!(
-        series.get_event_before(datetime(2025, 1, 1, 3, 3, 3, 3)),
+        series.get_previous_before(datetime(2025, 1, 1, 3, 3, 3, 3)),
         Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2))),
     );
 }
 
 #[test]
-fn series_get_event_containing() {
+fn series_get_containing() {
     let start = datetime(2025, 1, 1, 1, 1, 1, 0);
     let end = datetime(2025, 1, 3, 1, 1, 1, 0);
     let series = Series::new(start..end, daily(2).at(time(2, 2, 2, 2)));
     assert_eq!(
-        series.get_event_containing(datetime(2025, 1, 1, 1, 1, 1, 0)),
+        series.get_containing(datetime(2025, 1, 1, 1, 1, 1, 0)),
         None
     );
     assert_eq!(
-        series.get_event_containing(datetime(2025, 1, 1, 2, 2, 2, 2)),
+        series.get_containing(datetime(2025, 1, 1, 2, 2, 2, 2)),
         Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)))
     );
     assert_eq!(
-        series.get_event_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
+        series.get_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
         None
     );
 
@@ -198,7 +198,7 @@ fn series_get_event_containing() {
         .unwrap();
 
     assert_eq!(
-        series.get_event_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
+        series.get_containing(datetime(2025, 1, 1, 2, 2, 2, 3)),
         Some(Event::new(
             datetime(2025, 1, 1, 2, 2, 2, 2),
             datetime(2025, 1, 1, 3, 2, 2, 2)
@@ -206,7 +206,7 @@ fn series_get_event_containing() {
     );
 
     assert_eq!(
-        series.get_event_containing(datetime(2025, 1, 1, 3, 2, 2, 1)),
+        series.get_containing(datetime(2025, 1, 1, 3, 2, 2, 1)),
         Some(Event::new(
             datetime(2025, 1, 1, 2, 2, 2, 2),
             datetime(2025, 1, 1, 3, 2, 2, 2)
@@ -214,82 +214,82 @@ fn series_get_event_containing() {
     );
 
     assert_eq!(
-        series.get_event_containing(datetime(2025, 1, 1, 3, 2, 2, 2)),
+        series.get_containing(datetime(2025, 1, 1, 3, 2, 2, 2)),
         None
     );
 }
 
 #[test]
-fn series_first_event() {
+fn series_first() {
     let start = datetime(2025, 1, 1, 1, 1, 1, 0);
     let end = datetime(2025, 1, 3, 1, 1, 1, 0);
     let series = Series::new(start..end, daily(2).at(time(2, 2, 2, 2)));
     assert_eq!(
-        series.first_event(),
+        series.first(),
         Some(Event::at(datetime(2025, 1, 1, 2, 2, 2, 2)))
     );
 }
 
 #[test]
-fn series_last_event() {
+fn series_last() {
     let start = datetime(2025, 1, 1, 1, 1, 1, 0);
     let end = datetime(2025, 1, 10, 1, 1, 1, 0);
     let series = Series::new(start..end, daily(2).at(time(2, 2, 2, 2)));
     assert_eq!(
-        series.last_event(),
+        series.last(),
         Some(Event::at(datetime(2025, 1, 9, 2, 2, 2, 2)))
     );
 
     let series = Series::new(start.., daily(2).at(time(2, 2, 2, 2)));
     assert_eq!(
-        series.last_event(),
+        series.last(),
         Some(Event::at(datetime(9999, 12, 30, 2, 2, 2, 2)))
     );
 }
 
 #[test]
-fn series_last_event_unbounded() {
+fn series_last_unbounded() {
     let start = date(2025, 1, 1).at(1, 1, 1, 0);
     let series = Series::new(start.., hourly(2));
     assert_eq!(
-        series.last_event(),
+        series.last(),
         Some(Event::at(date(9999, 12, 31).at(23, 1, 1, 0)))
     );
 }
 
 #[test]
-fn series_get_closest_event() {
+fn series_get_closest_to() {
     let start = datetime(2025, 1, 1, 0, 0, 0, 0);
     let series = Series::new(start.., hourly(1));
 
     assert_eq!(
-        series.get_closest_event(datetime(2024, 12, 31, 0, 0, 0, 0)),
+        series.get_closest_to(datetime(2024, 12, 31, 0, 0, 0, 0)),
         Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0)))
     );
     assert_eq!(
-        series.get_closest_event(datetime(2025, 1, 1, 0, 0, 0, 0)),
+        series.get_closest_to(datetime(2025, 1, 1, 0, 0, 0, 0)),
         Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0)))
     );
     assert_eq!(
-        series.get_closest_event(datetime(2025, 1, 1, 0, 29, 0, 999)),
+        series.get_closest_to(datetime(2025, 1, 1, 0, 29, 0, 999)),
         Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0)))
     );
     assert_eq!(
-        series.get_closest_event(datetime(2025, 1, 1, 0, 30, 0, 0)),
+        series.get_closest_to(datetime(2025, 1, 1, 0, 30, 0, 0)),
         Some(Event::at(datetime(2025, 1, 1, 1, 0, 0, 0)))
     );
     assert_eq!(
-        series.get_closest_event(DateTime::MIN),
+        series.get_closest_to(DateTime::MIN),
         Some(Event::at(datetime(2025, 1, 1, 0, 0, 0, 0)))
     );
     assert_eq!(
-        series.get_closest_event(DateTime::MAX),
+        series.get_closest_to(DateTime::MAX),
         Some(Event::at(datetime(9999, 12, 31, 23, 0, 0, 0)))
     );
 }
 
 #[test]
-fn series_overlapping_last_event() {
+fn series_overlapping_last() {
     let start = date(2025, 1, 1).at(0, 0, 0, 0);
     let end = date(2025, 2, 1).at(0, 0, 0, 0);
     let series = Series::new(start..end, daily(1))
@@ -300,7 +300,7 @@ fn series_overlapping_last_event() {
 
     assert_eq!(series.end(), date(2025, 1, 29).at(22, 0, 0, 0));
     assert_eq!(
-        series.last_event(),
+        series.last(),
         Some(Event::new(
             date(2025, 1, 29).at(0, 0, 0, 0),
             date(2025, 1, 31).at(2, 0, 0, 0)

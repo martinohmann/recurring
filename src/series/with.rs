@@ -148,7 +148,7 @@ where
     ///     .fixpoint(fixpoint)
     ///     .build()?;
     ///
-    /// assert_eq!(series.first_event(), Some(Event::at(date(2025, 1, 1).at(12, 34, 56, 0))));
+    /// assert_eq!(series.first(), Some(Event::at(date(2025, 1, 1).at(12, 34, 56, 0))));
     ///
     /// // Fixpoint must be less or equal to `start`.
     /// assert!(series.with().fixpoint(start).build().is_ok());
