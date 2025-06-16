@@ -1,5 +1,7 @@
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![no_std]
-#![allow(missing_docs)] // @TODO(mohmann): enable warnings once API is fleshed out.
+#![warn(missing_docs)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::must_use_candidate, clippy::struct_field_names)]
 
