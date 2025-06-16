@@ -1,10 +1,25 @@
 [package]
 name = "recurring"
 version = "0.1.0"
+authors = ["Martin Ohmann <martinohmann@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "A vector-based map and set implementation"
+repository = "https://github.com/martinohmann/recurring"
+documentation = "https://docs.rs/recurring/"
+keywords = ["jiff", "series", "pattern", "no-std"]
+categories = ["date-and-time", "no-std"]
+readme = "README.md"
 edition = "2024"
+exclude = [
+    ".github/",
+]
 
 [dependencies]
 jiff = "0.2.10"
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+all-features = true
