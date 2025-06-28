@@ -95,6 +95,7 @@ where
     /// assert!(Series::try_new(DateTime::MAX.., hourly(2)).is_err());
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
+    #[inline]
     pub fn try_new<B: RangeBounds<DateTime>>(range: B, pattern: P) -> Result<Series<P>, Error> {
         let range = try_simplify_range(range)?;
         if range.start >= range.end {
@@ -125,6 +126,7 @@ where
     ///     .build()?;
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
+    #[inline]
     pub fn with(&self) -> SeriesWith<P> {
         SeriesWith::new(self.clone())
     }
@@ -132,6 +134,7 @@ where
     /// Returns the `DateTime` at which the series starts (inclusive).
     ///
     /// This is not necessarily the time of the first event in the series.
+    #[inline]
     pub fn start(&self) -> DateTime {
         self.range.start
     }
@@ -143,6 +146,7 @@ where
     ///
     /// If the series has a non-zero event duration configured, this will return `initial_end -
     /// event_duration`.
+    #[inline]
     pub fn end(&self) -> DateTime {
         self.range.end
     }
@@ -154,6 +158,7 @@ where
     ///
     /// Unless [`SeriesWith::fixpoint`] was called with a specific value, this returns the same
     /// value as [`Series::start`].
+    #[inline]
     pub fn fixpoint(&self) -> DateTime {
         self.range.fixpoint()
     }
@@ -161,11 +166,13 @@ where
     /// Returns the duration of individual events in the series.
     ///
     /// If this is zero, events will not have an end date.
+    #[inline]
     pub fn event_duration(&self) -> Span {
         self.core.event_duration()
     }
 
     /// Returns a reference to the recurrence pattern used by the series.
+    #[inline]
     pub fn pattern(&self) -> &P {
         self.core.pattern()
     }
@@ -189,6 +196,7 @@ where
     /// assert_eq!(iter.next_back(), Some(Event::at(date(9999, 12, 31).at(22, 0, 0, 0))));
     /// assert_eq!(iter.next_back(), Some(Event::at(date(9999, 12, 31).at(20, 0, 0, 0))));
     /// ```
+    #[inline]
     pub fn iter(&self) -> Iter<'_, P> {
         Iter::new(self)
     }
@@ -283,6 +291,7 @@ where
     ///
     /// assert_eq!(series.first(), Some(Event::at(date(2025, 1, 1).at(0, 0, 0, 0))));
     /// ```
+    #[inline]
     pub fn first(&self) -> Option<Event> {
         self.get_closest_to(self.range.start)
     }
@@ -306,6 +315,7 @@ where
     /// assert_eq!(series.last(), Some(Event::at(date(2025, 12, 31).at(22, 0, 0, 0))));
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
+    #[inline]
     pub fn last(&self) -> Option<Event> {
         self.get_previous_before(self.range.end)
     }
@@ -323,6 +333,7 @@ where
     /// assert!(!series.contains(date(2025, 1, 1).at(0, 35, 0, 0)));
     /// assert!(series.contains(date(2025, 2, 10).at(12, 0, 0, 0)));
     /// ```
+    #[inline]
     pub fn contains(&self, instant: DateTime) -> bool {
         self.get(instant).is_some()
     }
@@ -342,6 +353,7 @@ where
     /// assert!(series.get(date(2025, 1, 1).at(1, 0, 0, 0)).is_none());
     /// assert!(series.get(date(2026, 12, 31).at(14, 0, 0, 0)).is_some());
     /// ```
+    #[inline]
     pub fn get(&self, instant: DateTime) -> Option<Event> {
         self.core.get(instant, self.range)
     }
@@ -386,6 +398,7 @@ where
     /// );
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
+    #[inline]
     pub fn get_containing(&self, instant: DateTime) -> Option<Event> {
         self.core.get_containing(instant, self.range)
     }
@@ -431,6 +444,7 @@ where
     /// );
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
+    #[inline]
     pub fn get_next_after(&self, instant: DateTime) -> Option<Event> {
         self.core.get_next_after(instant, self.range)
     }
@@ -467,6 +481,7 @@ where
     ///     Some(Event::at(date(9999, 12, 31).at(23, 0, 0, 0))),
     /// );
     /// ```
+    #[inline]
     pub fn get_previous_before(&self, instant: DateTime) -> Option<Event> {
         self.core.get_previous_before(instant, self.range)
     }
@@ -501,6 +516,7 @@ where
     ///     Some(Event::at(series_start + 1.hour())),
     /// );
     /// ```
+    #[inline]
     pub fn get_closest_to(&self, instant: DateTime) -> Option<Event> {
         self.core.get_closest_to(instant, self.range)
     }
