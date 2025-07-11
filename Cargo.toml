@@ -15,7 +15,7 @@ exclude = [
 ]
 
 [dependencies]
-jiff = "0.2.10"
+jiff = "0.2.15"
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"
