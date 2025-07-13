@@ -33,10 +33,20 @@ impl<P> SeriesWith<P>
 where
     P: Pattern,
 {
-    /// Creates a new `SeriesWith` from a `Series`.
-    pub(crate) fn new(series: Series<P>) -> SeriesWith<P> {
+    /// Creates a new `SeriesWith` from a range and a pattern.
+    pub(crate) fn new<B: RangeBounds<DateTime>>(range: B, pattern: P) -> SeriesWith<P> {
         SeriesWith {
-            pattern: series.core.pattern,
+            pattern,
+            bounds: range.into_bounds(),
+            fixpoint: None,
+            event_duration: Span::new(),
+        }
+    }
+
+    /// Creates a new `SeriesWith` from a `Series`.
+    pub(crate) fn from_series(series: &Series<P>) -> SeriesWith<P> {
+        SeriesWith {
+            pattern: series.core.pattern.clone(),
             bounds: series.range.into_bounds(),
             fixpoint: series.range.fixpoint,
             event_duration: series.core.event_duration,

@@ -130,9 +130,7 @@ impl ToSeries for Event {
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     fn to_series<P: Pattern>(&self, pattern: P) -> Result<Series<P>, Error> {
-        self.start()
-            .to_series(pattern)?
-            .with()
+        Series::builder(self.start().., pattern)
             .event_duration(self.duration())
             .build()
     }
