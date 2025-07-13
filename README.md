@@ -108,8 +108,7 @@ let daily_around_lunch = cron().hour(12).minute(5).second(10);
 let first_of_month_in_the_morning = cron().day(1).hour(8).minute(45).second(0);
 let pattern = daily_around_lunch.and(first_of_month_in_the_morning);
 
-let series = Series::new(start.., pattern)
-    .with()
+let series = Series::builder(start.., pattern)
     .event_duration(1.hour())
     .build()
     .unwrap();
