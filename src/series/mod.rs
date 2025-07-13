@@ -97,22 +97,21 @@ where
     /// ```
     #[inline]
     pub fn try_new<B: RangeBounds<DateTime>>(range: B, pattern: P) -> Result<Series<P>, Error> {
-        let range = try_simplify_range(range)?;
-        if range.start >= range.end {
-            return Err(Error::datetime_range("series", range.into()));
-        }
-
-        Ok(Series {
-            core: SeriesCore::new(pattern, Span::new()),
-            range,
-        })
+        Series::builder(range, pattern).build()
     }
 
     /// Creates a builder for constructing a new `Series` from the fields of this series.
     ///
+    /// This method constructs a new `Series` and will not alter the original so it can still be
+    /// used after the returned builder is dropped.
+    ///
+    /// If you don't have an existing series but want to construct a new one and configure optional
+    /// details like the event duration or fixpoint, consider using [`Series::builder`] instead.
+    ///
     /// # Example
     ///
-    /// Set an explict end date for the series and configure the duration of the individual events.
+    /// Create a new series with the same recurrence pattern, an explict end date and configure
+    /// the duration of the individual events.
     ///
     /// ```
     /// use jiff::{ToSpan, civil::date};
@@ -124,11 +123,37 @@ where
     ///     .end(date(2025, 2, 1).at(0, 0, 0, 0))
     ///     .event_duration(1.hour())
     ///     .build()?;
+    ///
+    /// // s1 is still usable here and was not modified.
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
     #[inline]
     pub fn with(&self) -> SeriesWith<P> {
-        SeriesWith::new(self.clone())
+        SeriesWith::from_series(self)
+    }
+
+    /// Creates a builder for constructing a new `Series` that produces events within the provided
+    /// `range` according to the given recurrence [`Pattern`].
+    ///
+    /// If you already have a `Series` from which you would like to derive a new series consider
+    /// using [`Series::with`] instead.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jiff::{ToSpan, civil::date};
+    /// use recurring::{Series, pattern::daily};
+    ///
+    /// // An "infinite" series of daily 1-hour lunch meetings starting on January 1st 2025.
+    /// let start = date(2025, 1, 1).at(12, 0, 0, 0);
+    /// let series = Series::builder(start.., daily(1))
+    ///     .event_duration(1.hour())
+    ///     .build()?;
+    /// # Ok::<(), Box<dyn core::error::Error>>(())
+    /// ```
+    #[inline]
+    pub fn builder<B: RangeBounds<DateTime>>(range: B, pattern: P) -> SeriesWith<P> {
+        SeriesWith::new(range, pattern)
     }
 
     /// Returns the `DateTime` at which the series starts (inclusive).
