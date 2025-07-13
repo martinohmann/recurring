@@ -64,6 +64,7 @@ impl Event {
     /// let end = date(2025, 1, 2).at(0, 0, 0, 0);
     /// let event = Event::new(start, end);
     /// ```
+    #[inline]
     pub fn new(start: DateTime, end: DateTime) -> Event {
         Event::try_new(start, end).expect("invalid event end")
     }
@@ -87,6 +88,7 @@ impl Event {
     /// let event = Event::try_new(start, end)?;
     /// # Ok::<(), Box<dyn core::error::Error>>(())
     /// ```
+    #[inline]
     pub fn try_new(start: DateTime, end: DateTime) -> Result<Event, Error> {
         if start >= end {
             return Err(Error::datetime_range("event", start..end));
@@ -114,6 +116,7 @@ impl Event {
     /// let event = Event::at(start);
     /// assert_eq!(event.start(), start);
     /// ```
+    #[inline]
     pub fn start(&self) -> DateTime {
         self.start
     }
@@ -134,6 +137,7 @@ impl Event {
     /// let event = Event::new(start, end);
     /// assert_eq!(event.end(), Some(end));
     /// ```
+    #[inline]
     pub fn end(&self) -> Option<DateTime> {
         self.end
     }
@@ -156,6 +160,7 @@ impl Event {
     /// let event = Event::new(start, end);
     /// assert_eq!(event.duration().fieldwise(), 1.day());
     /// ```
+    #[inline]
     pub fn duration(&self) -> Span {
         self.end
             .and_then(|end| self.start.until(end).ok())
@@ -187,6 +192,7 @@ impl Event {
     /// assert!(!event.contains(end));
     /// assert!(!event.contains(end + 1.nanosecond()));
     /// ```
+    #[inline]
     pub fn contains(&self, instant: DateTime) -> bool {
         if let Some(end) = self.end {
             instant >= self.start && instant < end
