@@ -1,5 +1,4 @@
 #![doc = include_str!("../README.md")]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![no_std]
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
