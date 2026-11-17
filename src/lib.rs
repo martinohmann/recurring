@@ -16,7 +16,7 @@ use core::ops::{Bound, Range, RangeBounds, RangeFrom, RangeInclusive, RangeTo, R
 pub use error::Error;
 pub use event::Event;
 use jiff::civil::{Date, DateTime, time};
-use jiff::{ToSpan, Zoned};
+use jiff::{ToSpan, ZonedDateTime};
 use pattern::Combined;
 pub use range::DateTimeRange;
 #[doc(inline)]
@@ -189,22 +189,22 @@ impl ToSeries for Date {
     }
 }
 
-impl ToSeries for Zoned {
+impl ToSeries for ZonedDateTime {
     /// Converts a `Date` to a `Series` with the given recurrence [`Pattern`].
     ///
     /// The resulting series always starts at midnight on the date `to_series` is called on.
     ///
     /// # Errors
     ///
-    /// Returns an error if the `Zoned`'s datetime is `DateTime::MAX`.
+    /// Returns an error if the `ZonedDateTime`'s datetime is `DateTime::MAX`.
     ///
     /// # Example
     ///
     /// ```
-    /// use jiff::{Zoned, civil::date};
+    /// use jiff::{ZonedDateTime, civil::date};
     /// use recurring::{Event, ToSeries, pattern::hourly};
     ///
-    /// let zoned: Zoned = "2025-01-01 12:22[Europe/Berlin]".parse()?;
+    /// let zoned: ZonedDateTime = "2025-01-01 12:22[Europe/Berlin]".parse()?;
     ///
     /// let series = zoned.to_series(hourly(2))?;
     ///

@@ -3,7 +3,7 @@ use crate::error::{Error, err};
 use crate::series::Series;
 use core::ops::RangeBounds;
 use jiff::{
-    Zoned,
+    ZonedDateTime,
     civil::{Date, DateTime},
 };
 
@@ -29,8 +29,8 @@ pub enum SplitMode {
 /// more ergonomic:
 ///
 /// * `From<DateTime> for SeriesSplit` will construct a series split configuration which splits the
-///   series at a given datetime. The `Date`, `Zoned` and `&Zoned` types can be used instead of
-///   `DateTime` as well.
+///   series at a given datetime. The `Date`, `ZonedDateTime` and `&ZonedDateTime` types can be used
+///   instead of `DateTime` as well.
 /// * `From<(SplitMode, T)> for SeriesSplit where T: Into<SeriesSplit>` will construct a series
 ///   split configuration using a certain [`SplitMode`]. This enables splitting at the next,
 ///   previous or closest event.
@@ -134,14 +134,14 @@ impl From<Date> for SeriesSplit {
     }
 }
 
-impl From<Zoned> for SeriesSplit {
-    fn from(zoned: Zoned) -> Self {
+impl From<ZonedDateTime> for SeriesSplit {
+    fn from(zoned: ZonedDateTime) -> Self {
         SeriesSplit::new(zoned.datetime())
     }
 }
 
-impl From<&Zoned> for SeriesSplit {
-    fn from(zoned: &Zoned) -> Self {
+impl From<&ZonedDateTime> for SeriesSplit {
+    fn from(zoned: &ZonedDateTime) -> Self {
         SeriesSplit::new(zoned.datetime())
     }
 }
